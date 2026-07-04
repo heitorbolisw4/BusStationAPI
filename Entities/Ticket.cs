@@ -7,6 +7,6 @@ namespace BusStation_API.Entities
         public Guid DistanceId { get; set; }
         public float Price { get; set; }
 
-        public List<User>? Users { get; set; }
+        public User? User { get; set; }
     }
 }
