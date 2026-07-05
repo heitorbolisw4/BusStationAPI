@@ -9,5 +9,6 @@ namespace BusStation_API.Entities
 
         public Destination? Destination { get; set; }
         public Origin? Origin { get; set; }
+        public List<Ticket>? Tickets { get; set; }
     }
 }

@@ -8,5 +8,6 @@ namespace BusStation_API.Entities
         public float Price { get; set; }
 
         public User? User { get; set; }
+        public Distance? Distance { get; set; }
     }
 }

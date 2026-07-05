@@ -5,7 +5,7 @@ namespace BusStation_API.Data
 {
     public class AppDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions options) : base(options)
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
 
@@ -28,8 +28,21 @@ namespace BusStation_API.Data
                 entity.Property(u => u.Name).IsRequired().HasMaxLength(150);
                 entity.Property(u => u.Password).IsRequired().HasMaxLength(255);
 
-                entity.HasMany(u => u.Tickets).WithOne(t => t.User).HasForeignKey();
+                entity.HasMany(u => u.Tickets).WithOne(t => t.User).HasForeignKey(t => t.UserId);
             });
+            modelBuilder.Entity<Ticket>(entity =>
+            {
+               entity.HasKey(t => t.Id);
+               entity.HasOne(t => t.Distance).WithMany(d => d.Tickets).HasForeignKey(t => t.DistanceId);
+            });
+            modelBuilder.Entity<Distance>(entity =>
+            {
+                entity.HasKey(d => d.Id);
+                entity.HasOne(d => d.Origin).WithMany(d => d.Distances).HasForeignKey(d => d.OriginId);
+                entity.HasOne(d => d.Destination).WithMany(d => d.Distances).HasForeignKey(d => d.DestinationId);
+            });
+            modelBuilder.Entity<Origin>(entity => entity.HasKey(o => o.Id));
+            modelBuilder.Entity<Destination>(entity => entity.HasKey(d => d.Id));
         }
     }
 }

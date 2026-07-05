@@ -4,5 +4,6 @@ namespace BusStation_API.Entities
     {
         public int Id { get; set; }
         public string OriginName { get; set; } = string.Empty;
+        public List<Distance>? Distances { get; set; }
     }
 }
