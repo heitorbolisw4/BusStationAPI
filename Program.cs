@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using BusStation_API.Data;
+using BusStation_API.DTO.City;
 using BusStation_API.DTO.User;
 using BusStation_API.Entities;
 using BusStation_API.Interface;
@@ -46,7 +47,7 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 var user = app.MapGroup("/user").RequireAuthorization();
-
+var cities =  app.MapGroup("/cities");
 app.MapPost("/register", async (AppDbContext db, RegisterRequestDto request, IAuthService service) =>
 {
     if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
@@ -114,7 +115,27 @@ user.MapGet("/me", async (AppDbContext db, ClaimsPrincipal user) =>
 
 });
 
+cities.MapPost("/create", async (AppDbContext db, CreateCityRequestDto request) =>
+{
+    if(string.IsNullOrWhiteSpace(request.CityName) ||
+        string.IsNullOrWhiteSpace(request.State) ||
+        string.IsNullOrWhiteSpace(request.Acronym))
+        return Results.BadRequest();
 
+    var StateExists = await db.City.AnyAsync( c => c.State == request.Acronym);
+    if(StateExists)
+        return Results.Conflict();
+
+    City city = new City
+    {
+        CityName = request.CityName,
+        State = request.State,
+        Acronym = request.Acronym
+    };
+    db.Add(city);
+    await db.SaveChangesAsync();
+    return Results.Created();
+});
 
 
 

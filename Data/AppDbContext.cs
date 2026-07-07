@@ -19,6 +19,7 @@ namespace BusStation_API.Data
         public DbSet<Origin> Origins { get; set; }
         public DbSet<Route> Routes { get; set; }
         public DbSet<Destination> Destinations { get; set; }
+        public DbSet<City> City {get;set;}
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -64,9 +65,9 @@ namespace BusStation_API.Data
             {
                 entity.HasKey(c => c.Id);
                 entity.Property(c => c.CityName).HasMaxLength(150).IsRequired();
-                entity.HasIndex(c => c.State).IsUnique();
                 entity.Property(c => c.State).HasMaxLength(50);
                 entity.Property(c => c.Acronym).HasMaxLength(5);
+                entity.HasIndex(c => c.Acronym).IsUnique();
 
 
             });
