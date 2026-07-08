@@ -2,6 +2,8 @@ using System.Security.Claims;
 using System.Text;
 using BusStation_API.Data;
 using BusStation_API.DTO.City;
+using BusStation_API.DTO.Destination;
+using BusStation_API.DTO.Origin;
 using BusStation_API.DTO.User;
 using BusStation_API.Entities;
 using BusStation_API.Interface;
@@ -48,6 +50,10 @@ var app = builder.Build();
 
 var user = app.MapGroup("/user").RequireAuthorization();
 var cities =  app.MapGroup("/cities");
+var routes = app.MapGroup("/routes");
+var distances =  app.MapGroup("/distances");
+var origins = app.MapGroup("/origins");
+var destination = app.MapGroup("/destination");
 app.MapPost("/register", async (AppDbContext db, RegisterRequestDto request, IAuthService service) =>
 {
     if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
@@ -122,8 +128,8 @@ cities.MapPost("/create", async (AppDbContext db, CreateCityRequestDto request) 
         string.IsNullOrWhiteSpace(request.Acronym))
         return Results.BadRequest();
 
-    var StateExists = await db.City.AnyAsync( c => c.State == request.Acronym);
-    if(StateExists)
+    var Exists = await db.City.AnyAsync( c => c.State == request.Acronym);
+    if(Exists)
         return Results.Conflict();
 
     City city = new City
@@ -136,7 +142,81 @@ cities.MapPost("/create", async (AppDbContext db, CreateCityRequestDto request) 
     await db.SaveChangesAsync();
     return Results.Created();
 });
+cities.MapGet("/list", async (AppDbContext db) =>
+{
+
+    var response = await db.City.Select( r => new GetCityResponseDto
+    {
+        Id = r.Id,
+        CityName = r.CityName,
+        State = r.State,
+        Acronym = r.Acronym
+
+    }).ToListAsync();
+
+    if(response is null)
+        return Results.NotFound();
+
+    return Results.Ok(response);
+});
+
+origins.MapPost("/create", async (AppDbContext db, CreateOriginRequestDto request) =>
+{
+    if(string.IsNullOrWhiteSpace(request.OriginName))
+        return Results.BadRequest();
+
+    var city = await db.City.SingleAsync(c => c.Id == request.CityId);
+    if(city is null)
+        return Results.NotFound();
+  
+    var exists = await db.Origins.AnyAsync( o => o.OriginName == request.OriginName);
+    if(exists)
+        return Results.Conflict();
 
 
+    Origin origin = new Origin
+    {
+        OriginName = request.OriginName,
+        CityId = request.CityId
+
+    };
+    await db.AddAsync(origin);
+    await db.SaveChangesAsync();
+    return Results.Created();
+
+
+    
+});
+origins.MapGet("/list", async (AppDbContext db) =>
+{
+    var response = await db.Origins.Select( r => new GetOriginResponseDto
+    {
+        Id = r.Id,
+        OriginName = r.OriginName,
+        CityId = r.CityId
+    }).ToListAsync();
+
+    return Results.Ok(response);
+});
+
+destination.MapPost("/create", async (AppDbContext db, CreateDestinationRequestDto request) =>
+{
+    if(string.IsNullOrWhiteSpace(request.DestinationName))
+        return Results.BadRequest();
+
+    bool city = await db.City.AnyAsync(c => c.Id == request.CityId);
+    if(!city)
+        return Results.NotFound();
+
+    Destination destination = new Destination
+    {
+        DestinationName = request.DestinationName,
+        CityId = request.CityId
+    };
+    await db.AddAsync(destination);
+    await db.SaveChangesAsync();
+    return Results.Created();
+
+});
 
 app.Run();
