@@ -3,6 +3,7 @@ using System.Text;
 using BusStation_API.Data;
 using BusStation_API.DTO.City;
 using BusStation_API.DTO.Destination;
+using BusStation_API.DTO.Distance;
 using BusStation_API.DTO.Origin;
 using BusStation_API.DTO.User;
 using BusStation_API.Entities;
@@ -54,6 +55,8 @@ var routes = app.MapGroup("/routes");
 var distances =  app.MapGroup("/distances");
 var origins = app.MapGroup("/origins");
 var destination = app.MapGroup("/destination");
+var distance = app.MapGroup("/distance");
+
 app.MapPost("/register", async (AppDbContext db, RegisterRequestDto request, IAuthService service) =>
 {
     if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
@@ -218,5 +221,58 @@ destination.MapPost("/create", async (AppDbContext db, CreateDestinationRequestD
     return Results.Created();
 
 });
+destination.MapGet("/list", async (AppDbContext db) =>
+{
+    var response = await db.Destinations.Select( r => new GetDestinationDestinationDto
+    {
+        DestinationName = r.DestinationName,
+        CityId = r.CityId
+    }).ToListAsync();  
+
+    if(response is null)
+        return Results.NotFound();
+
+    return Results.Ok(response);
+});
+
+distance.MapPost("/create", async (AppDbContext db, CreateDistanceRequestDto request) =>
+{
+    //validar claims -> return 401
+
+    
+    // validar request -> return 400
+    if(request.OriginId == 0 ||
+        request.DestinationId == 0 ||
+        request.Kilometers == 0)
+        return Results.BadRequest();
+
+    // validar conflito -> return 409
+    bool exists = await db.Distances
+        .AnyAsync(d => d.OriginId == request.OriginId &&
+                        d.DestinationId == request.DestinationId);
+
+    if(exists)
+        return Results.Conflict();
+
+
+    Distance distance = new Distance
+    {
+        OriginId = request.OriginId,
+        DestinationId = request.DestinationId,
+        Quilometers = request.Kilometers
+
+    };
+    await db.Distances.AddAsync(distance);
+    await db.SaveChangesAsync();
+    return Results.Created();
+
+
+
+});
+distance.MapGet("/list", async (AppDbContext db) =>
+{
+    // query de cidade relacionando com id
+});
+
 
 app.Run();
