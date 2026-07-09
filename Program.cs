@@ -5,6 +5,7 @@ using BusStation_API.DTO.City;
 using BusStation_API.DTO.Destination;
 using BusStation_API.DTO.Distance;
 using BusStation_API.DTO.Origin;
+using BusStation_API.DTO.Route;
 using BusStation_API.DTO.User;
 using BusStation_API.Entities;
 using BusStation_API.Interface;
@@ -13,6 +14,7 @@ using BusStation_API.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Route = BusStation_API.Entities.Route;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -271,8 +273,54 @@ distance.MapPost("/create", async (AppDbContext db, CreateDistanceRequestDto req
 });
 distance.MapGet("/list", async (AppDbContext db) =>
 {
-    // query de cidade relacionando com id
+    var distance = await db.Distances.Select(d => new GetDistanceResponseDto
+    {
+        Id = d.Id,
+        OriginId = d.OriginId,
+        DestinationId = d.DestinationId,
+        Kilometers = d.Quilometers
+
+    }).ToListAsync();
+    if(distance is null)
+        return Results.NotFound();
+
+    return Results.Ok(distance);
 });
 
+routes.MapPost("/create", async (AppDbContext db, CreateRouteRequestDto request) =>
+{
+    // validar request -> return 400
+    if(string.IsNullOrWhiteSpace(request.RouteName))
+        return Results.BadRequest();
+
+
+    // validar conflict -> return 409
+    bool exists = await db.Routes.AnyAsync(r => r.RouteName == request.RouteName);
+    if(exists)
+        return Results.Conflict();
+
+    Route route = new Route
+    {
+        RouteName = request.RouteName,
+        DistanceId = request.DistanceId,
+    };
+    await db.AddAsync(route);
+    await db.SaveChangesAsync();
+    return Results.Created();
+
+});
+routes.MapGet("/list", async (AppDbContext db) =>
+{
+   var routes = await db.Routes.Select(r => new GetRouteResponseDto
+   {
+       RouteName = r.RouteName,
+       DistanceId = r.DistanceId
+
+   }).ToListAsync(); 
+    if(routes is null)
+        return Results.NotFound();
+
+    return Results.Ok(routes);
+});
 
 app.Run();
