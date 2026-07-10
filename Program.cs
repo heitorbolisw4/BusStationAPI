@@ -311,10 +311,13 @@ routes.MapPost("/create", async (AppDbContext db, CreateRouteRequestDto request)
 });
 routes.MapGet("/list", async (AppDbContext db) =>
 {
-   var routes = await db.Routes.Select(r => new GetRouteResponseDto
-   {
-       RouteName = r.RouteName,
-       DistanceId = r.DistanceId
+
+    var routes = await db.Routes.Select(r => new GetRouteResponseDto
+    {
+        RouteName = r.RouteName,
+        DistanceId = r.DistanceId,
+        Kilometers = r.Distance.Quilometers
+        
 
    }).ToListAsync(); 
     if(routes is null)
