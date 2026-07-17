@@ -8,7 +8,7 @@ namespace BusStation_API.Entities
         public float Price { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public Guid DistanceId { get; set; }
+        public int DistanceId { get; set; }
         public List<Ticket>? Tickets { get; set; }
         public Distance? Distance { get; set;}
         public List<Price>? Prices { get; set; }

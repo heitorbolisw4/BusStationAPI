@@ -3,6 +3,6 @@ namespace BusStation_API.DTO.Route
     public class CreateRouteRequestDto
     {
         public string RouteName { get; set; } = string.Empty;
-        public Guid DistanceId { get; set; }
+        public int DistanceId { get; set; }
     }
 }
