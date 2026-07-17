@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BusStation_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260705140154_InitialCreate")]
+    [Migration("20260717123127_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -25,6 +25,37 @@ namespace BusStation_API.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("BusStation_API.Entities.City", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Acronym")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<string>("CityName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Acronym")
+                        .IsUnique();
+
+                    b.ToTable("City");
+                });
+
             modelBuilder.Entity("BusStation_API.Entities.Destination", b =>
                 {
                     b.Property<int>("Id")
@@ -33,11 +64,16 @@ namespace BusStation_API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("CityId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("DestinationName")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CityId");
 
                     b.ToTable("Destinations");
                 });
@@ -74,13 +110,62 @@ namespace BusStation_API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("CityId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("OriginName")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CityId");
+
                     b.ToTable("Origins");
+                });
+
+            modelBuilder.Entity("BusStation_API.Entities.Price", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<float>("PricePerKm")
+                        .HasColumnType("real");
+
+                    b.Property<int>("RouteId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RouteId");
+
+                    b.ToTable("Prices");
+                });
+
+            modelBuilder.Entity("BusStation_API.Entities.Route", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("DistanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RouteName")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DistanceId");
+
+                    b.ToTable("Routes");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Ticket", b =>
@@ -89,18 +174,18 @@ namespace BusStation_API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("DistanceId")
-                        .HasColumnType("uuid");
-
                     b.Property<float>("Price")
                         .HasColumnType("real");
+
+                    b.Property<int>("RouteId")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DistanceId");
+                    b.HasIndex("RouteId");
 
                     b.HasIndex("UserId");
 
@@ -138,6 +223,17 @@ namespace BusStation_API.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("BusStation_API.Entities.Destination", b =>
+                {
+                    b.HasOne("BusStation_API.Entities.City", "City")
+                        .WithMany("Destinations")
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("City");
+                });
+
             modelBuilder.Entity("BusStation_API.Entities.Distance", b =>
                 {
                     b.HasOne("BusStation_API.Entities.Destination", "Destination")
@@ -157,11 +253,44 @@ namespace BusStation_API.Migrations
                     b.Navigation("Origin");
                 });
 
-            modelBuilder.Entity("BusStation_API.Entities.Ticket", b =>
+            modelBuilder.Entity("BusStation_API.Entities.Origin", b =>
+                {
+                    b.HasOne("BusStation_API.Entities.City", "City")
+                        .WithMany("Origins")
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("City");
+                });
+
+            modelBuilder.Entity("BusStation_API.Entities.Price", b =>
+                {
+                    b.HasOne("BusStation_API.Entities.Route", "Route")
+                        .WithMany("Prices")
+                        .HasForeignKey("RouteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Route");
+                });
+
+            modelBuilder.Entity("BusStation_API.Entities.Route", b =>
                 {
                     b.HasOne("BusStation_API.Entities.Distance", "Distance")
-                        .WithMany("Tickets")
+                        .WithMany("Routes")
                         .HasForeignKey("DistanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Distance");
+                });
+
+            modelBuilder.Entity("BusStation_API.Entities.Ticket", b =>
+                {
+                    b.HasOne("BusStation_API.Entities.Route", "Route")
+                        .WithMany("Tickets")
+                        .HasForeignKey("RouteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -171,9 +300,16 @@ namespace BusStation_API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Distance");
+                    b.Navigation("Route");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BusStation_API.Entities.City", b =>
+                {
+                    b.Navigation("Destinations");
+
+                    b.Navigation("Origins");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Destination", b =>
@@ -183,12 +319,19 @@ namespace BusStation_API.Migrations
 
             modelBuilder.Entity("BusStation_API.Entities.Distance", b =>
                 {
-                    b.Navigation("Tickets");
+                    b.Navigation("Routes");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Origin", b =>
                 {
                     b.Navigation("Distances");
+                });
+
+            modelBuilder.Entity("BusStation_API.Entities.Route", b =>
+                {
+                    b.Navigation("Prices");
+
+                    b.Navigation("Tickets");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.User", b =>

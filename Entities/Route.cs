@@ -6,6 +6,9 @@ namespace BusStation_API.Entities
         public string RouteName { get; set; } = string.Empty;
         public Guid DistanceId { get; set; }
         public List<Ticket>? Tickets { get; set; }
-        public Distance? Distance { get; set; }
+        public Distance? Distance { get; set;}
+        public List<Price>? Prices { get; set; }
+        
+        
     }
 }

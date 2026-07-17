@@ -20,6 +20,7 @@ namespace BusStation_API.Data
         public DbSet<Route> Routes { get; set; }
         public DbSet<Destination> Destinations { get; set; }
         public DbSet<City> City {get;set;}
+        public DbSet<Price> Prices { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -60,6 +61,7 @@ namespace BusStation_API.Data
                 entity.HasKey(r => r.Id);
                 entity.Property(r => r.RouteName).HasMaxLength(20);
                 entity.HasOne(r => r.Distance).WithMany(d => d.Routes).HasForeignKey(r => r.DistanceId);
+            
             });
             modelBuilder.Entity<City>(entity =>
             {
@@ -71,6 +73,13 @@ namespace BusStation_API.Data
 
 
             });
+        
+            modelBuilder.Entity<Price>(entity =>
+            {
+               entity.HasKey(p => p.Id);
+               entity.HasOne(p => p.Route).WithMany(r => r.Prices).HasForeignKey(p => p.RouteId);
+            });
+        
         }
     }
 }

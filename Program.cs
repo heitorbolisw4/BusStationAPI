@@ -6,6 +6,7 @@ using BusStation_API.DTO.Destination;
 using BusStation_API.DTO.Distance;
 using BusStation_API.DTO.Origin;
 using BusStation_API.DTO.Route;
+using BusStation_API.DTO.Ticket;
 using BusStation_API.DTO.User;
 using BusStation_API.Entities;
 using BusStation_API.Interface;
@@ -58,6 +59,7 @@ var distances =  app.MapGroup("/distances");
 var origins = app.MapGroup("/origins");
 var destination = app.MapGroup("/destination");
 var distance = app.MapGroup("/distance");
+var tickets = app.MapGroup("/tickets");
 
 app.MapPost("/register", async (AppDbContext db, RegisterRequestDto request, IAuthService service) =>
 {
@@ -316,7 +318,8 @@ routes.MapGet("/list", async (AppDbContext db) =>
     {
         RouteName = r.RouteName,
         DistanceId = r.DistanceId,
-        Kilometers = r.Distance.Quilometers
+        Kilometers = r.Distance!.Quilometers,
+        
         
 
    }).ToListAsync(); 
@@ -325,5 +328,30 @@ routes.MapGet("/list", async (AppDbContext db) =>
 
     return Results.Ok(routes);
 });
+routes.MapGet("/list/{int:id}", async(int id, AppDbContext db) =>
+{
+    var route = await db.Routes.Where(r => r.Id == id).Select(r => new GetRouteResponseDto
+    {
+        RouteName = r.RouteName,
+        Kilometers = r.Distance!.Quilometers
+    }).ToListAsync();
 
+});
+
+
+
+
+
+// tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto request) =>
+// {
+//     if(request.RouteId == 0)
+//         return Results.BadRequest(); 
+
+//     var route = await db.Routes.FirstOrDefaultAsync( r => r.Id == request.RouteId);
+//     if(route is null)
+//         return Results.NotFound();
+
+
+  
+// });
 app.Run();

@@ -41,6 +41,7 @@ namespace BusStation_API.Migrations
                         .HasColumnType("character varying(150)");
 
                     b.Property<string>("State")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
@@ -118,6 +119,27 @@ namespace BusStation_API.Migrations
                     b.HasIndex("CityId");
 
                     b.ToTable("Origins");
+                });
+
+            modelBuilder.Entity("BusStation_API.Entities.Price", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<float>("PricePerKm")
+                        .HasColumnType("real");
+
+                    b.Property<int>("RouteId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RouteId");
+
+                    b.ToTable("Prices");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Route", b =>
@@ -239,6 +261,17 @@ namespace BusStation_API.Migrations
                     b.Navigation("City");
                 });
 
+            modelBuilder.Entity("BusStation_API.Entities.Price", b =>
+                {
+                    b.HasOne("BusStation_API.Entities.Route", "Route")
+                        .WithMany("Prices")
+                        .HasForeignKey("RouteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Route");
+                });
+
             modelBuilder.Entity("BusStation_API.Entities.Route", b =>
                 {
                     b.HasOne("BusStation_API.Entities.Distance", "Distance")
@@ -293,6 +326,8 @@ namespace BusStation_API.Migrations
 
             modelBuilder.Entity("BusStation_API.Entities.Route", b =>
                 {
+                    b.Navigation("Prices");
+
                     b.Navigation("Tickets");
                 });
 
