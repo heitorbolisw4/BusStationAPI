@@ -169,23 +169,21 @@ cities.MapGet("/list", async (AppDbContext db) =>
 
 origins.MapPost("/create", async (AppDbContext db, CreateOriginRequestDto request) =>
 {
-    // if(string.IsNullOrWhiteSpace(request.OriginName))
-    //     return Results.BadRequest();
+    if(request.CityId <= 0)
+        return Results.BadRequest();
 
     var city = await db.City.SingleAsync(c => c.Id == request.CityId);
     if(city is null)
         return Results.NotFound();
   
-    // var exists = await db.Origins.AnyAsync( o => o.OriginName == request.OriginName);
-    // if(exists)
-    //     return Results.Conflict();
+    var exists = await db.Origins.AnyAsync( o => o.CityId == request.CityId);
+    if(exists)
+        return Results.Conflict();
 
 
     Origin origin = new Origin
     {
-        //OriginName = request.OriginName,
         CityId = request.CityId
-
     };
     await db.AddAsync(origin);
     await db.SaveChangesAsync();
@@ -199,7 +197,6 @@ origins.MapGet("/list", async (AppDbContext db) =>
     var response = await db.Origins.Select( r => new GetOriginResponseDto
     {
         Id = r.Id,
-        //OriginName = r.OriginName,
         CityId = r.CityId
     }).ToListAsync();
 
@@ -208,18 +205,23 @@ origins.MapGet("/list", async (AppDbContext db) =>
 
 destination.MapPost("/create", async (AppDbContext db, CreateDestinationRequestDto request) =>
 {
-    // if(string.IsNullOrWhiteSpace(request.DestinationName))
-    //     return Results.BadRequest();
+    if(request.CityId <= 0)
+        return Results.BadRequest();
 
-    bool city = await db.City.AnyAsync(c => c.Id == request.CityId);
-    if(!city)
+    var city = await db.City.SingleAsync(c => c.Id == request.CityId);
+    if(city is null)
         return Results.NotFound();
+
+
+    var exists = await db.Destinations.AnyAsync( d => d.CityId == request.CityId);
+    if(exists)
+        return Results.Conflict();
 
     Destination destination = new Destination
     {
-        //DestinationName = request.DestinationName,
         CityId = request.CityId
     };
+
     await db.AddAsync(destination);
     await db.SaveChangesAsync();
     return Results.Created();
@@ -229,7 +231,7 @@ destination.MapGet("/list", async (AppDbContext db) =>
 {
     var response = await db.Destinations.Select( r => new GetDestinationDestinationDto
     {
-        //DestinationName = r.DestinationName,
+        Id = r.Id,
         CityId = r.CityId
     }).ToListAsync();  
 
@@ -245,9 +247,18 @@ distance.MapPost("/create", async (AppDbContext db, CreateDistanceRequestDto req
 
     
     // validar request -> return 400
-    if(request.OriginId == 0 ||
-        request.DestinationId == 0 ||
-        request.Kilometers == 0)
+    if(request.OriginId <= 0 ||
+        request.DestinationId <= 0 ||
+        request.Kilometers <= 0)
+        return Results.BadRequest();
+
+
+    var origin = await db.Origins.AnyAsync(o => o.Id == request.OriginId);
+    var destination = await db.Destinations.AnyAsync(d => d.Id == request.DestinationId);
+    if(!destination || !origin)
+        return Results.NotFound();
+
+    if(request.OriginId == request.DestinationId)
         return Results.BadRequest();
 
     // validar conflito -> return 409
@@ -292,8 +303,11 @@ distance.MapGet("/list", async (AppDbContext db) =>
 routes.MapPost("/create", async (AppDbContext db, CreateRouteRequestDto request) =>
 {
     // validar request -> return 400
-    if(string.IsNullOrWhiteSpace(request.RouteName))
+    if(string.IsNullOrWhiteSpace(request.RouteName) ||
+        request.Seat > 0  ||
+        request.DistanceId <= 0 )
         return Results.BadRequest();
+
 
 
     // validar conflict -> return 409
