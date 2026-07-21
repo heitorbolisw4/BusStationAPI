@@ -54,15 +54,15 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-var user = app.MapGroup("/user").RequireAuthorization();
-var cities =  app.MapGroup("/cities");
-var routes = app.MapGroup("/routes");
-var distances =  app.MapGroup("/distances");
-var origins = app.MapGroup("/origins");
-var destination = app.MapGroup("/destination");
-var distance = app.MapGroup("/distance");
+var user = app.MapGroup("/user").RequireAuthorization().WithTags("Users");
+var cities =  app.MapGroup("/cities").WithTags("Cities");
+var routes = app.MapGroup("/routes").WithTags("Routes");
+var distances =  app.MapGroup("/distances").WithTags("Distances");
+var origins = app.MapGroup("/origins").WithTags("Origins");
+var destination = app.MapGroup("/destination").WithTags("Destinations");
+var distance = app.MapGroup("/distance").WithTags("Distances");
 var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
-var prices = app.MapGroup("/prices");
+var prices = app.MapGroup("/prices").WithTags("Prices");
 
 app.MapPost("/register", async (AppDbContext db, RegisterRequestDto request, IAuthService service) =>
 {
@@ -129,6 +129,42 @@ user.MapGet("/me", async (AppDbContext db, ClaimsPrincipal user) =>
     return Results.Ok(response);
 
 });
+user.MapPut("/profile", async (AppDbContext db, ClaimsPrincipal user, UpdateUserRequestDto request) =>
+{
+   //verifico o id do user -> retorna 401
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+   
+   // verifico se user existe no banco -> retorna 404
+    var profile = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+    if(profile is null)
+        return Results.NotFound();
+
+   
+   
+   // verifico request -> retorna 400
+    if(string.IsNullOrWhiteSpace(request.Email) ||
+    string.IsNullOrWhiteSpace(request.Name) ||
+    request.Age < 18)
+    return Results.BadRequest();
+
+   // verifico se email ja é existente no banco -> retorna 409
+    var mailExists = await db.Users.AnyAsync(u => u.Email == request.Email);
+    if(mailExists)
+        return Results.Conflict();
+
+   //atualizo os dados e retorno 204
+   profile.Email = request.Email;
+   profile.Name = request.Name;
+   profile.Age = request.Age;
+   await db.SaveChangesAsync();
+   return Results.NoContent();
+
+});
+//users.MapDelete
+
+
 
 cities.MapPost("/create", async (AppDbContext db, CreateCityRequestDto request) =>
 {
@@ -151,7 +187,6 @@ cities.MapPost("/create", async (AppDbContext db, CreateCityRequestDto request) 
     await db.SaveChangesAsync();
     return Results.Created();
 });
-
 cities.MapGet("/list", async (AppDbContext db) =>
 {
 
@@ -169,6 +204,11 @@ cities.MapGet("/list", async (AppDbContext db) =>
 
     return Results.Ok(response);
 });
+//cities.MapPut
+//cities.MapDelete
+
+
+
 
 origins.MapPost("/create", async (AppDbContext db, CreateOriginRequestDto request) =>
 {
@@ -206,6 +246,10 @@ origins.MapGet("/list", async (AppDbContext db) =>
 
     return Results.Ok(response);
 });
+//origins.MapPut
+//origins.MapDelete
+
+
 
 destination.MapPost("/create", async (AppDbContext db, CreateDestinationRequestDto request) =>
 {
@@ -245,6 +289,10 @@ destination.MapGet("/list", async (AppDbContext db) =>
 
     return Results.Ok(response);
 });
+//destination.MapPut
+//destination.MapDelete
+
+
 
 distance.MapPost("/create", async (AppDbContext db, CreateDistanceRequestDto request) =>
 {
@@ -304,6 +352,10 @@ distance.MapGet("/list", async (AppDbContext db) =>
 
     return Results.Ok(distance);
 });
+//distance.MapPut
+//distance.MapDelete
+
+
 
 routes.MapPost("/create", async (AppDbContext db, CreateRouteRequestDto request) =>
 {
@@ -384,6 +436,11 @@ routes.MapPatch("/update/{id:int}", async (int id, AppDbContext db, UpdateRouteR
     await db.SaveChangesAsync();
     return Results.Ok();
 });
+//MapPut
+//MapDelete
+
+
+
 
 prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request) =>
 {
@@ -410,7 +467,9 @@ prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request)
 
 
 });
-
+//prices.MapPut
+//prices.MapGet
+//prices.MapDelete
 
 tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto request, ClaimsPrincipal user) =>
 {
@@ -443,4 +502,11 @@ tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto reques
 
 
 });
+//tickets.MapPut
+//tickets.MapGet
+//tickets.MapDelete
+
+
+
+
 app.Run();
