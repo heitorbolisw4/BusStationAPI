@@ -49,7 +49,8 @@ namespace BusStation_API.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    CityId = table.Column<int>(type: "integer", nullable: false)
+                    CityId = table.Column<int>(type: "integer", nullable: false),
+                    CityAcronym = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -68,7 +69,8 @@ namespace BusStation_API.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    CityId = table.Column<int>(type: "integer", nullable: false)
+                    CityId = table.Column<int>(type: "integer", nullable: false),
+                    CityAcronym = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -109,6 +111,26 @@ namespace BusStation_API.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Prices",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    PricePerKm = table.Column<float>(type: "real", nullable: false),
+                    DistanceId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Prices", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Prices_Distances_DistanceId",
+                        column: x => x.DistanceId,
+                        principalTable: "Distances",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Routes",
                 columns: table => new
                 {
@@ -128,26 +150,6 @@ namespace BusStation_API.Migrations
                         name: "FK_Routes_Distances_DistanceId",
                         column: x => x.DistanceId,
                         principalTable: "Distances",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Prices",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    PricePerKm = table.Column<float>(type: "real", nullable: false),
-                    RouteId = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Prices", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Prices_Routes_RouteId",
-                        column: x => x.RouteId,
-                        principalTable: "Routes",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -206,9 +208,9 @@ namespace BusStation_API.Migrations
                 column: "CityId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Prices_RouteId",
+                name: "IX_Prices_DistanceId",
                 table: "Prices",
-                column: "RouteId");
+                column: "DistanceId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Routes_DistanceId",

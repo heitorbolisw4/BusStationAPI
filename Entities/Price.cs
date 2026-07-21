@@ -4,7 +4,7 @@ namespace BusStation_API.Entities
     {
         public int Id { get; set; }
         public float PricePerKm { get; set; }
-        public int RouteId { get; set; }
-        public Route? Route { get; set; }
+        public int DistanceId { get; set; }
+        public Distance? Distance { get; set; }
     }
 }

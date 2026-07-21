@@ -77,7 +77,7 @@ namespace BusStation_API.Data
             modelBuilder.Entity<Price>(entity =>
             {
                entity.HasKey(p => p.Id);
-               entity.HasOne(p => p.Route).WithMany(r => r.Prices).HasForeignKey(p => p.RouteId);
+               entity.HasOne(p => p.Distance).WithMany(d => d.Prices).HasForeignKey(p => p.DistanceId);
             });
         
         }

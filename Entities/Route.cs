@@ -11,7 +11,6 @@ namespace BusStation_API.Entities
         public int DistanceId { get; set; }
         public List<Ticket>? Tickets { get; set; }
         public Distance? Distance { get; set;}
-        public List<Price>? Prices { get; set; }
         
         
     }

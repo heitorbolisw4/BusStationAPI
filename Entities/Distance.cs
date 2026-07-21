@@ -10,6 +10,7 @@ namespace BusStation_API.Entities
         public Destination? Destination { get; set; }
         public Origin? Origin { get; set; }
         public List<Route>? Routes { get; set; }
+        public List<Price>? Prices { get; set; }
 
     }
 }

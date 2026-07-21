@@ -1,10 +1,12 @@
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using BusStation_API.Data;
 using BusStation_API.DTO.City;
 using BusStation_API.DTO.Destination;
 using BusStation_API.DTO.Distance;
 using BusStation_API.DTO.Origin;
+using BusStation_API.DTO.Price;
 using BusStation_API.DTO.Route;
 using BusStation_API.DTO.Ticket;
 using BusStation_API.DTO.User;
@@ -27,7 +29,7 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSetting
 
 builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
-
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options => options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
 
@@ -59,7 +61,8 @@ var distances =  app.MapGroup("/distances");
 var origins = app.MapGroup("/origins");
 var destination = app.MapGroup("/destination");
 var distance = app.MapGroup("/distance");
-var tickets = app.MapGroup("/tickets");
+var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
+var prices = app.MapGroup("/prices");
 
 app.MapPost("/register", async (AppDbContext db, RegisterRequestDto request, IAuthService service) =>
 {
@@ -104,7 +107,7 @@ app.MapPost("/login", async (AppDbContext db, LoginRequestDto request, IAuthServ
     var token = tokenService.GenerateToken(user);
     return Results.Ok(new {token});
 
-});
+    });
 
 
 user.MapGet("/me", async (AppDbContext db, ClaimsPrincipal user) =>
@@ -194,9 +197,10 @@ origins.MapPost("/create", async (AppDbContext db, CreateOriginRequestDto reques
 });
 origins.MapGet("/list", async (AppDbContext db) =>
 {
-    var response = await db.Origins.Select( r => new GetOriginResponseDto
+    var response = await db.Origins.Include(r => r.City).Select( r => new GetOriginResponseDto
     {
         Id = r.Id,
+        CityAcronym = r.City!.Acronym,
         CityId = r.CityId
     }).ToListAsync();
 
@@ -229,9 +233,10 @@ destination.MapPost("/create", async (AppDbContext db, CreateDestinationRequestD
 });
 destination.MapGet("/list", async (AppDbContext db) =>
 {
-    var response = await db.Destinations.Select( r => new GetDestinationDestinationDto
+    var response = await db.Destinations.Include(r => r.City).Select( r => new GetDestinationDestinationDto
     {
         Id = r.Id,
+        CityAcronym = r.City!.Acronym,
         CityId = r.CityId
     }).ToListAsync();  
 
@@ -304,21 +309,34 @@ routes.MapPost("/create", async (AppDbContext db, CreateRouteRequestDto request)
 {
     // validar request -> return 400
     if(string.IsNullOrWhiteSpace(request.RouteName) ||
-        request.Seat > 0  ||
+        request.Seat <= 0  ||
         request.DistanceId <= 0 )
         return Results.BadRequest();
 
 
-
     // validar conflict -> return 409
-    bool exists = await db.Routes.AnyAsync(r => r.RouteName == request.RouteName);
+    var exists = await db.Routes.AnyAsync(r => r.RouteName == request.RouteName && r.DistanceId == request.DistanceId);
     if(exists)
         return Results.Conflict();
 
-    Route route = new Route
+    
+    var query = await db.Distances.Where(d => d.Id == request.DistanceId).Include(p => p.Prices).SingleOrDefaultAsync();
+    if(query is null || query.Prices is null)
+        return Results.NotFound();
+
+    var selectedPrice = query.Prices.OrderByDescending(p => p.Id).FirstOrDefault();
+    if(selectedPrice is null)
+        return Results.NotFound();
+
+    
+    var price = query.Kilometers * selectedPrice.PricePerKm; 
+    Route route = new()
     {
         RouteName = request.RouteName,
         DistanceId = request.DistanceId,
+        Seat = request.Seat,
+        Price = price,
+        CreatedAt = DateTime.UtcNow
     };
     await db.AddAsync(route);
     await db.SaveChangesAsync();
@@ -351,21 +369,78 @@ routes.MapGet("/list/{id:int}", async (int id, AppDbContext db) =>
     }).ToListAsync();
 
 });
+routes.MapPatch("/update/{id:int}", async (int id, AppDbContext db, UpdateRouteRequestDto request) =>
+{
+    if(request.Price <= 0)
+        return Results.BadRequest();
+
+    // var route = await db.Routes.Where(r => r.Id == id).Include(p => p.Prices).SingleOrDefaultAsync();
+    // if(route is null || route.Distance is null || route.Prices is null)
+    //     return Results.NotFound();
+
+    // var price = route.Distance.Kilometers * route.Prices.PricePerKm;
+
+    // route.Price = price;
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
+prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request) =>
+{
+
+    if(request.DistanceId <= 0 || request.PricePerKm <= 0)
+        return Results.BadRequest();
+
+
+    var distance = await db.Distances.AnyAsync(r => r.Id == request.DistanceId);
+    if(!distance)
+        return Results.NotFound();
+
+
+    Price price = new()
+    {
+      DistanceId = request.DistanceId,  
+      PricePerKm = request.PricePerKm
+    };
+
+    await db.AddAsync(price);
+    await db.SaveChangesAsync();
+    return Results.Created();
 
 
 
+});
 
 
-// tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto request) =>
-// {
-//     if(request.RouteId == 0)
-//         return Results.BadRequest(); 
+tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto request, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
 
-//     var route = await db.Routes.FirstOrDefaultAsync( r => r.Id == request.RouteId);
-//     if(route is null)
-//         return Results.NotFound();
+    var profile = await db.Users.SingleAsync( u => u.Id == userId);
+    if(profile is null)
+        return Results.NotFound();
 
 
+    
+    if(request.RouteId <= 0)
+        return Results.BadRequest(); 
 
-// });
+    var route = await db.Routes.SingleOrDefaultAsync( r => r.Id == request.RouteId);
+    if(route is null)
+        return Results.NotFound();
+
+    Ticket ticket = new()
+    {
+      UserId = userId,
+      RouteId = request.RouteId,
+      PurchasedOn = DateTime.UtcNow,  
+    };
+    await db.Tickets.AddAsync(ticket);
+    await db.SaveChangesAsync();
+    return Results.Created($"/api/tickets/{ticket}", ticket);
+
+
+});
 app.Run();

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BusStation_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260717173651_InitialCreate")]
+    [Migration("20260720084158_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -64,6 +64,10 @@ namespace BusStation_API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CityAcronym")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("CityId")
                         .HasColumnType("integer");
 
@@ -108,6 +112,10 @@ namespace BusStation_API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CityAcronym")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("CityId")
                         .HasColumnType("integer");
 
@@ -126,15 +134,15 @@ namespace BusStation_API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("DistanceId")
+                        .HasColumnType("integer");
+
                     b.Property<float>("PricePerKm")
                         .HasColumnType("real");
 
-                    b.Property<int>("RouteId")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("RouteId");
+                    b.HasIndex("DistanceId");
 
                     b.ToTable("Prices");
                 });
@@ -276,13 +284,13 @@ namespace BusStation_API.Migrations
 
             modelBuilder.Entity("BusStation_API.Entities.Price", b =>
                 {
-                    b.HasOne("BusStation_API.Entities.Route", "Route")
+                    b.HasOne("BusStation_API.Entities.Distance", "Distance")
                         .WithMany("Prices")
-                        .HasForeignKey("RouteId")
+                        .HasForeignKey("DistanceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Route");
+                    b.Navigation("Distance");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Route", b =>
@@ -329,6 +337,8 @@ namespace BusStation_API.Migrations
 
             modelBuilder.Entity("BusStation_API.Entities.Distance", b =>
                 {
+                    b.Navigation("Prices");
+
                     b.Navigation("Routes");
                 });
 
@@ -339,8 +349,6 @@ namespace BusStation_API.Migrations
 
             modelBuilder.Entity("BusStation_API.Entities.Route", b =>
                 {
-                    b.Navigation("Prices");
-
                     b.Navigation("Tickets");
                 });
 
