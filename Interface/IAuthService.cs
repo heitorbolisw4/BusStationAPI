@@ -5,6 +5,6 @@ namespace BusStation_API.Interface
     interface IAuthService
     {
         string GenerateHash(string InputPassword);
-        bool PasswordVerify(string InputPassword, string PasswordDb);
+        bool PasswordVerify(string InputPassword, string PasswordDb); 
     }
 }

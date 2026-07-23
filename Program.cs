@@ -533,15 +533,16 @@ tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto reques
 
 
     
-    if(request.RouteId <= 0)
+    if(request.RouteId <= 0 || request.NumberOfSeats <= 0)
         return Results.BadRequest(); 
 
     var route = await db.Routes.SingleOrDefaultAsync( r => r.Id == request.RouteId);
     if(route is null)
         return Results.NotFound();
 
-    
-
+    if(route.Seat < request.NumberOfSeats)
+        return Results.BadRequest();
+    var seatNums = route.Seat - request.NumberOfSeats;
     Ticket ticket = new()
     {
       UserId = userId,
@@ -549,6 +550,10 @@ tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto reques
       PurchasedOn = DateTime.UtcNow,  
     };
     await db.Tickets.AddAsync(ticket);
+
+
+
+    route.Seat = seatNums;
     await db.SaveChangesAsync();
     return Results.Created($"/api/tickets/{ticket}", ticket);
 
