@@ -19,6 +19,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Route = BusStation_API.Entities.Route;
 
+
+#region Aplication
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -53,7 +55,11 @@ builder.Services.AddAuthorization();
 
 
 var app = builder.Build();
+#endregion
 
+
+
+#region Groups
 var user = app.MapGroup("/user").RequireAuthorization().WithTags("Users");
 var cities =  app.MapGroup("/cities").WithTags("Cities");
 var routes = app.MapGroup("/routes").WithTags("Routes");
@@ -63,7 +69,10 @@ var destination = app.MapGroup("/destination").WithTags("Destinations");
 var distance = app.MapGroup("/distance").WithTags("Distances");
 var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
 var prices = app.MapGroup("/prices").WithTags("Prices");
+#endregion
 
+
+#region Public
 app.MapPost("/register", async (AppDbContext db, RegisterRequestDto request, IAuthService service) =>
 {
     if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
@@ -108,8 +117,12 @@ app.MapPost("/login", async (AppDbContext db, LoginRequestDto request, IAuthServ
     return Results.Ok(new {token});
 
     });
+#endregion
 
 
+
+
+#region Users
 user.MapGet("/me", async (AppDbContext db, ClaimsPrincipal user) =>
 {
     var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -163,9 +176,11 @@ user.MapPut("/profile", async (AppDbContext db, ClaimsPrincipal user, UpdateUser
 
 });
 //users.MapDelete
+#endregion
 
 
 
+#region Cities
 cities.MapPost("/create", async (AppDbContext db, CreateCityRequestDto request) =>
 {
     if(string.IsNullOrWhiteSpace(request.CityName) ||
@@ -256,10 +271,12 @@ cities.MapDelete("/delete/{id:int}", async (int id, AppDbContext db) =>
 
 
 });
+#endregion
 
 
 
 
+#region Origins
 origins.MapPost("/create", async (AppDbContext db, CreateOriginRequestDto request) =>
 {
     if(request.CityId <= 0)
@@ -298,9 +315,12 @@ origins.MapGet("/list", async (AppDbContext db) =>
 });
 //origins.MapPut
 //origins.MapDelete
+#endregion
 
 
 
+
+#region Destination
 destination.MapPost("/create", async (AppDbContext db, CreateDestinationRequestDto request) =>
 {
     if(request.CityId <= 0)
@@ -341,9 +361,12 @@ destination.MapGet("/list", async (AppDbContext db) =>
 });
 //destination.MapPut
 //destination.MapDelete
+#endregion
 
 
 
+
+#region Distance
 distance.MapPost("/create", async (AppDbContext db, CreateDistanceRequestDto request) =>
 {
     //validar claims -> return 401
@@ -404,14 +427,15 @@ distance.MapGet("/list", async (AppDbContext db) =>
 });
 //distance.MapPut
 //distance.MapDelete
+#endregion
 
 
 
+#region Routes
 routes.MapPost("/create", async (AppDbContext db, CreateRouteRequestDto request) =>
 {
     // validar request -> return 400
     if(string.IsNullOrWhiteSpace(request.RouteName) ||
-        request.Seat <= 0  ||
         request.DistanceId <= 0 )
         return Results.BadRequest();
 
@@ -436,7 +460,6 @@ routes.MapPost("/create", async (AppDbContext db, CreateRouteRequestDto request)
     {
         RouteName = request.RouteName,
         DistanceId = request.DistanceId,
-        Seat = request.Seat,
         Price = price,
         CreatedAt = DateTime.UtcNow
     };
@@ -488,10 +511,10 @@ routes.MapPatch("/update/{id:int}", async (int id, AppDbContext db, UpdateRouteR
 });
 //MapPut
 //MapDelete
+#endregion
 
 
-
-
+#region Prices
 prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request) =>
 {
 
@@ -520,49 +543,52 @@ prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request)
 //prices.MapPut
 //prices.MapGet
 //prices.MapDelete
+#endregion
 
-tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto request, ClaimsPrincipal user) =>
-{
-    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
-    if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        return Results.Unauthorized();
 
-    var profile = await db.Users.SingleAsync( u => u.Id == userId);
-    if(profile is null)
-        return Results.NotFound();
+#region Tickets
+// tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto request, ClaimsPrincipal user) =>
+// {
+//     var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+//     if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+//         return Results.Unauthorized();
+
+//     var profile = await db.Users.SingleAsync( u => u.Id == userId);
+//     if(profile is null)
+//         return Results.NotFound();
 
 
     
-    if(request.RouteId <= 0 || request.NumberOfSeats <= 0)
-        return Results.BadRequest(); 
+//     if(request.RouteId <= 0 || request.NumberOfSeats <= 0)
+//         return Results.BadRequest(); 
 
-    var route = await db.Routes.SingleOrDefaultAsync( r => r.Id == request.RouteId);
-    if(route is null)
-        return Results.NotFound();
+//     var route = await db.Routes.SingleOrDefaultAsync( r => r.Id == request.RouteId);
+//     if(route is null)
+//         return Results.NotFound();
 
-    if(route.Seat < request.NumberOfSeats)
-        return Results.BadRequest();
-    var seatNums = route.Seat - request.NumberOfSeats;
-    Ticket ticket = new()
-    {
-      UserId = userId,
-      RouteId = request.RouteId,
-      PurchasedOn = DateTime.UtcNow,  
-    };
-    await db.Tickets.AddAsync(ticket);
-
-
-
-    route.Seat = seatNums;
-    await db.SaveChangesAsync();
-    return Results.Created($"/api/tickets/{ticket}", ticket);
+//     if(route.Seat < request.NumberOfSeats)
+//         return Results.BadRequest();
+//     var seatNums = route.Seat - request.NumberOfSeats;
+//     Ticket ticket = new()
+//     {
+//       UserId = userId,
+//       RouteId = request.RouteId,
+//       PurchasedOn = DateTime.UtcNow,  
+//     };
+//     await db.Tickets.AddAsync(ticket);
 
 
-});
+
+//     route.Seat = seatNums;
+//     await db.SaveChangesAsync();
+//     return Results.Created($"/api/tickets/{ticket}", ticket);
+
+
+// });
 //tickets.MapPut
 //tickets.MapGet
 //tickets.MapDelete
-
+#endregion
 
 
 

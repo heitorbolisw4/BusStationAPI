@@ -4,6 +4,5 @@ namespace BusStation_API.DTO.Route
     {
         public string RouteName { get; set; } = string.Empty;
         public int DistanceId { get; set; }
-        public int Seat { get; set; }
     }
 }

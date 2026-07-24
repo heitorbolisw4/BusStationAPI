@@ -6,7 +6,6 @@ namespace BusStation_API.Entities
         public int CityId { get; set; }
         public string CityAcronym { get; set; } = string.Empty;
         public City? City { get; set; }
-        public Destination? Destination { get; set; }
         public List<Distance>? Distances { get; set; }
     }
 }

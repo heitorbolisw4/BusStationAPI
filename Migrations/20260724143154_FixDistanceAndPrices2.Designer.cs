@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BusStation_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260720084158_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260724143154_FixDistanceAndPrices2")]
+    partial class FixDistanceAndPrices2
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,31 @@ namespace BusStation_API.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("BusStation_API.Entities.Boarding", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("BoardingDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Seat")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TicketId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TicketId")
+                        .IsUnique();
+
+                    b.ToTable("Boardings");
+                });
 
             modelBuilder.Entity("BusStation_API.Entities.City", b =>
                 {
@@ -54,6 +79,36 @@ namespace BusStation_API.Migrations
                         .IsUnique();
 
                     b.ToTable("City");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Acronym = "Indi",
+                            CityName = "Indianopolis",
+                            State = "MG"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Acronym = "Udia",
+                            CityName = "Uberlandia",
+                            State = "MG"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Acronym = "Reri",
+                            CityName = "Araguari",
+                            State = "MG"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Acronym = "Ura",
+                            CityName = "Uberaba",
+                            State = "MG"
+                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Destination", b =>
@@ -76,6 +131,32 @@ namespace BusStation_API.Migrations
                     b.HasIndex("CityId");
 
                     b.ToTable("Destinations");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CityAcronym = "Indi",
+                            CityId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CityAcronym = "Udia",
+                            CityId = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CityAcronym = "Reri",
+                            CityId = 3
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CityAcronym = "Ura",
+                            CityId = 4
+                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Distance", b =>
@@ -102,6 +183,50 @@ namespace BusStation_API.Migrations
                     b.HasIndex("OriginId");
 
                     b.ToTable("Distances");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            DestinationId = 2,
+                            Kilometers = 60,
+                            OriginId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            DestinationId = 1,
+                            Kilometers = 60,
+                            OriginId = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            DestinationId = 3,
+                            Kilometers = 45,
+                            OriginId = 2
+                        },
+                        new
+                        {
+                            Id = 4,
+                            DestinationId = 2,
+                            Kilometers = 45,
+                            OriginId = 3
+                        },
+                        new
+                        {
+                            Id = 5,
+                            DestinationId = 4,
+                            Kilometers = 100,
+                            OriginId = 2
+                        },
+                        new
+                        {
+                            Id = 6,
+                            DestinationId = 2,
+                            Kilometers = 100,
+                            OriginId = 4
+                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Origin", b =>
@@ -124,6 +249,32 @@ namespace BusStation_API.Migrations
                     b.HasIndex("CityId");
 
                     b.ToTable("Origins");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CityAcronym = "Indi",
+                            CityId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CityAcronym = "Udia",
+                            CityId = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CityAcronym = "Reri",
+                            CityId = 3
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CityAcronym = "Ura",
+                            CityId = 4
+                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Price", b =>
@@ -145,6 +296,44 @@ namespace BusStation_API.Migrations
                     b.HasIndex("DistanceId");
 
                     b.ToTable("Prices");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            DistanceId = 1,
+                            PricePerKm = 0.5f
+                        },
+                        new
+                        {
+                            Id = 2,
+                            DistanceId = 2,
+                            PricePerKm = 0.5f
+                        },
+                        new
+                        {
+                            Id = 3,
+                            DistanceId = 3,
+                            PricePerKm = 0.35f
+                        },
+                        new
+                        {
+                            Id = 4,
+                            DistanceId = 4,
+                            PricePerKm = 0.35f
+                        },
+                        new
+                        {
+                            Id = 5,
+                            DistanceId = 5,
+                            PricePerKm = 0.9f
+                        },
+                        new
+                        {
+                            Id = 6,
+                            DistanceId = 6,
+                            PricePerKm = 0.9f
+                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Route", b =>
@@ -155,11 +344,17 @@ namespace BusStation_API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("BoardingId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("DistanceId")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<float>("Price")
                         .HasColumnType("real");
@@ -169,13 +364,12 @@ namespace BusStation_API.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<int>("Seat")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BoardingId");
 
                     b.HasIndex("DistanceId");
 
@@ -190,18 +384,16 @@ namespace BusStation_API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<float>("FarePaid")
+                        .HasColumnType("real");
+
                     b.Property<DateTime>("PurchasedOn")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("RouteId")
-                        .HasColumnType("integer");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RouteId");
 
                     b.HasIndex("UserId");
 
@@ -239,6 +431,17 @@ namespace BusStation_API.Migrations
                     b.HasIndex("Email");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("BusStation_API.Entities.Boarding", b =>
+                {
+                    b.HasOne("BusStation_API.Entities.Ticket", "Ticket")
+                        .WithOne("Boarding")
+                        .HasForeignKey("BusStation_API.Entities.Boarding", "TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ticket");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Destination", b =>
@@ -295,32 +498,37 @@ namespace BusStation_API.Migrations
 
             modelBuilder.Entity("BusStation_API.Entities.Route", b =>
                 {
+                    b.HasOne("BusStation_API.Entities.Boarding", "Boarding")
+                        .WithMany("Routes")
+                        .HasForeignKey("BoardingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("BusStation_API.Entities.Distance", "Distance")
                         .WithMany("Routes")
                         .HasForeignKey("DistanceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Boarding");
+
                     b.Navigation("Distance");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Ticket", b =>
                 {
-                    b.HasOne("BusStation_API.Entities.Route", "Route")
-                        .WithMany("Tickets")
-                        .HasForeignKey("RouteId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("BusStation_API.Entities.User", "User")
                         .WithMany("Tickets")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Route");
-
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BusStation_API.Entities.Boarding", b =>
+                {
+                    b.Navigation("Routes");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.City", b =>
@@ -347,9 +555,9 @@ namespace BusStation_API.Migrations
                     b.Navigation("Distances");
                 });
 
-            modelBuilder.Entity("BusStation_API.Entities.Route", b =>
+            modelBuilder.Entity("BusStation_API.Entities.Ticket", b =>
                 {
-                    b.Navigation("Tickets");
+                    b.Navigation("Boarding");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.User", b =>

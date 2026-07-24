@@ -64,13 +64,35 @@ namespace BusStation_API.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Tickets",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: false),
+                    PurchasedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    FarePaid = table.Column<float>(type: "real", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tickets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Tickets_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Origins",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     CityId = table.Column<int>(type: "integer", nullable: false),
-                    CityAcronym = table.Column<string>(type: "text", nullable: false)
+                    CityAcronym = table.Column<string>(type: "text", nullable: false),
+                    DestinationId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -79,6 +101,32 @@ namespace BusStation_API.Migrations
                         name: "FK_Origins_City_CityId",
                         column: x => x.CityId,
                         principalTable: "City",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Origins_Destinations_DestinationId",
+                        column: x => x.DestinationId,
+                        principalTable: "Destinations",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Boardings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    TicketId = table.Column<int>(type: "integer", nullable: false),
+                    Seat = table.Column<int>(type: "integer", nullable: false),
+                    BoardingDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Boardings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Boardings_Tickets_TicketId",
+                        column: x => x.TicketId,
+                        principalTable: "Tickets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -137,15 +185,22 @@ namespace BusStation_API.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     RouteName = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Seat = table.Column<int>(type: "integer", nullable: false),
                     Price = table.Column<float>(type: "real", nullable: false),
+                    DistanceId = table.Column<int>(type: "integer", nullable: false),
+                    BoardingId = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    DistanceId = table.Column<int>(type: "integer", nullable: false)
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Routes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Routes_Boardings_BoardingId",
+                        column: x => x.BoardingId,
+                        principalTable: "Boardings",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Routes_Distances_DistanceId",
                         column: x => x.DistanceId,
@@ -154,32 +209,11 @@ namespace BusStation_API.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "Tickets",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<int>(type: "integer", nullable: false),
-                    RouteId = table.Column<int>(type: "integer", nullable: false),
-                    PurchasedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Tickets", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Tickets_Routes_RouteId",
-                        column: x => x.RouteId,
-                        principalTable: "Routes",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Tickets_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+            migrationBuilder.CreateIndex(
+                name: "IX_Boardings_TicketId",
+                table: "Boardings",
+                column: "TicketId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_City_Acronym",
@@ -208,19 +242,24 @@ namespace BusStation_API.Migrations
                 column: "CityId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Origins_DestinationId",
+                table: "Origins",
+                column: "DestinationId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Prices_DistanceId",
                 table: "Prices",
                 column: "DistanceId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Routes_BoardingId",
+                table: "Routes",
+                column: "BoardingId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Routes_DistanceId",
                 table: "Routes",
                 column: "DistanceId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Tickets_RouteId",
-                table: "Tickets",
-                column: "RouteId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tickets_UserId",
@@ -240,22 +279,25 @@ namespace BusStation_API.Migrations
                 name: "Prices");
 
             migrationBuilder.DropTable(
-                name: "Tickets");
-
-            migrationBuilder.DropTable(
                 name: "Routes");
 
             migrationBuilder.DropTable(
-                name: "Users");
+                name: "Boardings");
 
             migrationBuilder.DropTable(
                 name: "Distances");
 
             migrationBuilder.DropTable(
-                name: "Destinations");
+                name: "Tickets");
 
             migrationBuilder.DropTable(
                 name: "Origins");
+
+            migrationBuilder.DropTable(
+                name: "Users");
+
+            migrationBuilder.DropTable(
+                name: "Destinations");
 
             migrationBuilder.DropTable(
                 name: "City");

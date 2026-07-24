@@ -3,6 +3,7 @@ using System;
 using BusStation_API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BusStation_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260724142011_FixMockCities")]
+    partial class FixMockCities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -180,50 +183,6 @@ namespace BusStation_API.Migrations
                     b.HasIndex("OriginId");
 
                     b.ToTable("Distances");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DestinationId = 2,
-                            Kilometers = 60,
-                            OriginId = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DestinationId = 1,
-                            Kilometers = 60,
-                            OriginId = 2
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DestinationId = 3,
-                            Kilometers = 45,
-                            OriginId = 2
-                        },
-                        new
-                        {
-                            Id = 4,
-                            DestinationId = 2,
-                            Kilometers = 45,
-                            OriginId = 3
-                        },
-                        new
-                        {
-                            Id = 5,
-                            DestinationId = 4,
-                            Kilometers = 100,
-                            OriginId = 2
-                        },
-                        new
-                        {
-                            Id = 6,
-                            DestinationId = 2,
-                            Kilometers = 100,
-                            OriginId = 4
-                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Origin", b =>
@@ -293,44 +252,6 @@ namespace BusStation_API.Migrations
                     b.HasIndex("DistanceId");
 
                     b.ToTable("Prices");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DistanceId = 1,
-                            PricePerKm = 0.5f
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DistanceId = 2,
-                            PricePerKm = 0.5f
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DistanceId = 3,
-                            PricePerKm = 0.35f
-                        },
-                        new
-                        {
-                            Id = 4,
-                            DistanceId = 4,
-                            PricePerKm = 0.35f
-                        },
-                        new
-                        {
-                            Id = 5,
-                            DistanceId = 5,
-                            PricePerKm = 0.9f
-                        },
-                        new
-                        {
-                            Id = 6,
-                            DistanceId = 6,
-                            PricePerKm = 0.9f
-                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Route", b =>

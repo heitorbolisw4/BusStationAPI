@@ -3,6 +3,7 @@ using System;
 using BusStation_API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BusStation_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260724133905_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -76,36 +79,6 @@ namespace BusStation_API.Migrations
                         .IsUnique();
 
                     b.ToTable("City");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Acronym = "Indi",
-                            CityName = "Indianopolis",
-                            State = "MG"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Acronym = "Udia",
-                            CityName = "Uberlandia",
-                            State = "MG"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Acronym = "Reri",
-                            CityName = "Araguari",
-                            State = "MG"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Acronym = "Ura",
-                            CityName = "Uberaba",
-                            State = "MG"
-                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Destination", b =>
@@ -128,32 +101,6 @@ namespace BusStation_API.Migrations
                     b.HasIndex("CityId");
 
                     b.ToTable("Destinations");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CityAcronym = "Indi",
-                            CityId = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CityAcronym = "Udia",
-                            CityId = 2
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CityAcronym = "Reri",
-                            CityId = 3
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CityAcronym = "Ura",
-                            CityId = 4
-                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Distance", b =>
@@ -180,50 +127,6 @@ namespace BusStation_API.Migrations
                     b.HasIndex("OriginId");
 
                     b.ToTable("Distances");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DestinationId = 2,
-                            Kilometers = 60,
-                            OriginId = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DestinationId = 1,
-                            Kilometers = 60,
-                            OriginId = 2
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DestinationId = 3,
-                            Kilometers = 45,
-                            OriginId = 2
-                        },
-                        new
-                        {
-                            Id = 4,
-                            DestinationId = 2,
-                            Kilometers = 45,
-                            OriginId = 3
-                        },
-                        new
-                        {
-                            Id = 5,
-                            DestinationId = 4,
-                            Kilometers = 100,
-                            OriginId = 2
-                        },
-                        new
-                        {
-                            Id = 6,
-                            DestinationId = 2,
-                            Kilometers = 100,
-                            OriginId = 4
-                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Origin", b =>
@@ -241,37 +144,16 @@ namespace BusStation_API.Migrations
                     b.Property<int>("CityId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("DestinationId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CityId");
 
-                    b.ToTable("Origins");
+                    b.HasIndex("DestinationId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CityAcronym = "Indi",
-                            CityId = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CityAcronym = "Udia",
-                            CityId = 2
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CityAcronym = "Reri",
-                            CityId = 3
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CityAcronym = "Ura",
-                            CityId = 4
-                        });
+                    b.ToTable("Origins");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Price", b =>
@@ -293,44 +175,6 @@ namespace BusStation_API.Migrations
                     b.HasIndex("DistanceId");
 
                     b.ToTable("Prices");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DistanceId = 1,
-                            PricePerKm = 0.5f
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DistanceId = 2,
-                            PricePerKm = 0.5f
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DistanceId = 3,
-                            PricePerKm = 0.35f
-                        },
-                        new
-                        {
-                            Id = 4,
-                            DistanceId = 4,
-                            PricePerKm = 0.35f
-                        },
-                        new
-                        {
-                            Id = 5,
-                            DistanceId = 5,
-                            PricePerKm = 0.9f
-                        },
-                        new
-                        {
-                            Id = 6,
-                            DistanceId = 6,
-                            PricePerKm = 0.9f
-                        });
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Route", b =>
@@ -479,7 +323,13 @@ namespace BusStation_API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("BusStation_API.Entities.Destination", "Destination")
+                        .WithMany()
+                        .HasForeignKey("DestinationId");
+
                     b.Navigation("City");
+
+                    b.Navigation("Destination");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.Price", b =>
