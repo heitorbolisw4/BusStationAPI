@@ -4,9 +4,11 @@ namespace BusStation_API.Entities
     {
         public int Id { get; set; }
         public int TicketId { get; set; }
+        public int RouteId { get; set; }
         public int Seat { get; set; }
-        public DateTime BoardingDate { get; set; }
-        public List<Route>? Routes { get; set; }
+        public DateOnly BoardingDate { get; set; }
+        public TimeOnly BoardingTime { get; set; }
+        public Route? Routes { get; set; }
         public Ticket? Ticket { get; set; }
     }
 }

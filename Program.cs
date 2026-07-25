@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using BusStation_API.Data;
+using BusStation_API.DTO.Boarding;
 using BusStation_API.DTO.City;
 using BusStation_API.DTO.Destination;
 using BusStation_API.DTO.Distance;
@@ -69,6 +71,7 @@ var destination = app.MapGroup("/destination").WithTags("Destinations");
 var distance = app.MapGroup("/distance").WithTags("Distances");
 var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
 var prices = app.MapGroup("/prices").WithTags("Prices");
+var boardings = app.MapGroup("/boardings");
 #endregion
 
 
@@ -513,6 +516,33 @@ routes.MapPatch("/update/{id:int}", async (int id, AppDbContext db, UpdateRouteR
 //MapDelete
 #endregion
 
+boardings.MapPost("/create", async (AppDbContext db, CreateBoardingRequestDto request) =>
+{
+    
+//    // valido request -> return 400 
+//     if(request.RouteId <= 0 || request.Seats <= 0)
+//         return Results.BadRequest();
+
+    // eu valido data e hora
+    var theDate = request.BoardingDate;
+    var today = DateOnly.FromDateTime(DateTime.Now);
+    if(theDate < today)
+        return Results.Ok(true);
+    // var route  = await db.Routes.AnyAsync(x => x.Id == request.RouteId);
+    // if(!route)
+        // return Results.NotFound();
+
+
+    // Boarding boarding = new()
+    // {
+    //     RouteId = request.RouteId,
+    //     Seat = request.Seats,
+    // };
+
+
+    return Results.Ok(today);
+
+});
 
 #region Prices
 prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request) =>

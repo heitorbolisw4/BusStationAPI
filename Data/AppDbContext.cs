@@ -38,7 +38,7 @@ namespace BusStation_API.Data
             modelBuilder.Entity<Ticket>(entity =>
             {
                entity.HasKey(t => t.Id);
-               entity.HasOne(t => t.Boarding).WithOne(b => b.Ticket).HasForeignKey<Boarding>(b => b.TicketId);
+               entity.HasOne(t => t.Routes).WithMany(b => b.Tickets).HasForeignKey(b => b.RouteId);
             });
             modelBuilder.Entity<Distance>(entity =>
             {
@@ -119,7 +119,7 @@ namespace BusStation_API.Data
             modelBuilder.Entity<Boarding>(entity =>
             {
                entity.HasKey(x => x.Id);
-               entity.HasMany(x => x.Routes).WithOne(x => x.Boarding).HasForeignKey(x=> x.BoardingId);
+               entity.HasOne(x => x.Routes).WithMany(x => x.Boardings).HasForeignKey(x=> x.RouteId);
 
             });
 

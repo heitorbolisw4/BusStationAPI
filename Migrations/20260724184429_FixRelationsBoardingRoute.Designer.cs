@@ -3,6 +3,7 @@ using System;
 using BusStation_API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BusStation_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260724184429_FixRelationsBoardingRoute")]
+    partial class FixRelationsBoardingRoute
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,11 +33,8 @@ namespace BusStation_API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateOnly>("BoardingDate")
-                        .HasColumnType("date");
-
-                    b.Property<TimeOnly>("BoardingTime")
-                        .HasColumnType("time without time zone");
+                    b.Property<DateTime>("BoardingDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("RouteId")
                         .HasColumnType("integer");
@@ -49,7 +49,8 @@ namespace BusStation_API.Migrations
 
                     b.HasIndex("RouteId");
 
-                    b.HasIndex("TicketId");
+                    b.HasIndex("TicketId")
+                        .IsUnique();
 
                     b.ToTable("Boardings");
                 });
@@ -365,9 +366,6 @@ namespace BusStation_API.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<int>("TicketId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -392,15 +390,10 @@ namespace BusStation_API.Migrations
                     b.Property<DateTime>("PurchasedOn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("RouteId")
-                        .HasColumnType("integer");
-
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RouteId");
 
                     b.HasIndex("UserId");
 
@@ -449,8 +442,8 @@ namespace BusStation_API.Migrations
                         .IsRequired();
 
                     b.HasOne("BusStation_API.Entities.Ticket", "Ticket")
-                        .WithMany()
-                        .HasForeignKey("TicketId")
+                        .WithOne("Boarding")
+                        .HasForeignKey("BusStation_API.Entities.Boarding", "TicketId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -524,19 +517,11 @@ namespace BusStation_API.Migrations
 
             modelBuilder.Entity("BusStation_API.Entities.Ticket", b =>
                 {
-                    b.HasOne("BusStation_API.Entities.Route", "Routes")
-                        .WithMany("Tickets")
-                        .HasForeignKey("RouteId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("BusStation_API.Entities.User", "User")
                         .WithMany("Tickets")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Routes");
 
                     b.Navigation("User");
                 });
@@ -568,8 +553,11 @@ namespace BusStation_API.Migrations
             modelBuilder.Entity("BusStation_API.Entities.Route", b =>
                 {
                     b.Navigation("Boardings");
+                });
 
-                    b.Navigation("Tickets");
+            modelBuilder.Entity("BusStation_API.Entities.Ticket", b =>
+                {
+                    b.Navigation("Boarding");
                 });
 
             modelBuilder.Entity("BusStation_API.Entities.User", b =>
