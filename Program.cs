@@ -53,10 +53,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
    }; 
 });
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorization();
 
 
 var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
 #endregion
 
 
@@ -519,28 +527,31 @@ routes.MapPatch("/update/{id:int}", async (int id, AppDbContext db, UpdateRouteR
 boardings.MapPost("/create", async (AppDbContext db, CreateBoardingRequestDto request) =>
 {
     
-//    // valido request -> return 400 
-//     if(request.RouteId <= 0 || request.Seats <= 0)
-//         return Results.BadRequest();
-
-    // eu valido data e hora
-    var theDate = request.BoardingDate;
+   // valido request -> return 400 
     var today = DateOnly.FromDateTime(DateTime.Now);
-    if(theDate < today)
-        return Results.Ok(true);
-    // var route  = await db.Routes.AnyAsync(x => x.Id == request.RouteId);
-    // if(!route)
-        // return Results.NotFound();
+    if(request.RouteId <= 0 || request.Seats <= 0)
+        return Results.BadRequest();
+
+    if(request.BoardingDate < today)
+        return Results.Conflict();
+    // eu valido data e hora
+    var route  = await db.Routes.AnyAsync(x => x.Id == request.RouteId);
+    if(!route)
+        return Results.NotFound();
 
 
-    // Boarding boarding = new()
-    // {
-    //     RouteId = request.RouteId,
-    //     Seat = request.Seats,
-    // };
+    Boarding boarding = new()
+    {
+        RouteId = request.RouteId,
+        Seat = request.Seats,
+        BoardingDate = request.BoardingDate,
+        BoardingTime = request.BoardingTime
 
+    };
 
-    return Results.Ok(today);
+    await db.Boardings.AddAsync(boarding);
+    await db.SaveChangesAsync();
+    return Results.Created();
 
 });
 
@@ -620,6 +631,6 @@ prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request)
 //tickets.MapDelete
 #endregion
 
-
+app.MapSwagger();
 
 app.Run();
