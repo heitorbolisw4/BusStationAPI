@@ -19,6 +19,7 @@ using BusStation_API.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Route = BusStation_API.Entities.Route;
 
 
@@ -54,7 +55,32 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "BusStationApi", Version = "v1"});
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+       In = ParameterLocation.Header,
+       Type = SecuritySchemeType.Http,
+       Scheme = "bearer",
+       BearerFormat = "JWT"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        } 
+    });
+});
 builder.Services.AddAuthorization();
 
 
@@ -524,6 +550,7 @@ routes.MapPatch("/update/{id:int}", async (int id, AppDbContext db, UpdateRouteR
 //MapDelete
 #endregion
 
+#region Boardings
 boardings.MapPost("/create", async (AppDbContext db, CreateBoardingRequestDto request) =>
 {
     
@@ -532,9 +559,14 @@ boardings.MapPost("/create", async (AppDbContext db, CreateBoardingRequestDto re
     if(request.RouteId <= 0 || request.Seats <= 0)
         return Results.BadRequest();
 
+    // eu valido data
     if(request.BoardingDate < today)
         return Results.Conflict();
-    // eu valido data e hora
+    
+    // eu valido hora
+    
+
+
     var route  = await db.Routes.AnyAsync(x => x.Id == request.RouteId);
     if(!route)
         return Results.NotFound();
@@ -554,6 +586,8 @@ boardings.MapPost("/create", async (AppDbContext db, CreateBoardingRequestDto re
     return Results.Created();
 
 });
+#endregion
+
 
 #region Prices
 prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request) =>
@@ -588,44 +622,52 @@ prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request)
 
 
 #region Tickets
-// tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto request, ClaimsPrincipal user) =>
-// {
-//     var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
-//     if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-//         return Results.Unauthorized();
+tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto request, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
 
-//     var profile = await db.Users.SingleAsync( u => u.Id == userId);
-//     if(profile is null)
-//         return Results.NotFound();
-
+    var profile = await db.Users.SingleAsync( u => u.Id == userId);
+    if(profile is null)
+        return Results.NotFound();
+    
+    if(request.RouteId <= 0 || request.BoardingId <= 0)
+        return Results.BadRequest(); 
 
     
-//     if(request.RouteId <= 0 || request.NumberOfSeats <= 0)
-//         return Results.BadRequest(); 
+    
+    
+    var now = DateTime.UtcNow;
+    var today = DateOnly.FromDateTime(now);
+    var currentTime = TimeOnly.FromDateTime(now);
 
-//     var route = await db.Routes.SingleOrDefaultAsync( r => r.Id == request.RouteId);
-//     if(route is null)
-//         return Results.NotFound();
+    // eu localizo a route e boarding
+    var boarding = await db.Boardings.Where(x => x.Id == request.BoardingId)
+    .Include(x => x.Routes).Where(x => x.RouteId == request.RouteId).FirstOrDefaultAsync();
 
-//     if(route.Seat < request.NumberOfSeats)
-//         return Results.BadRequest();
-//     var seatNums = route.Seat - request.NumberOfSeats;
-//     Ticket ticket = new()
-//     {
-//       UserId = userId,
-//       RouteId = request.RouteId,
-//       PurchasedOn = DateTime.UtcNow,  
-//     };
-//     await db.Tickets.AddAsync(ticket);
+    if(boarding is null || boarding.Routes is null)
+        return Results.NotFound();
 
+    
+    if(boarding.Seat <= 0)
+        return Results.BadRequest("Dont have seats");
 
 
-//     route.Seat = seatNums;
-//     await db.SaveChangesAsync();
-//     return Results.Created($"/api/tickets/{ticket}", ticket);
+    // eu monto o ticket
+    Ticket ticket = new()
+    {
+        RouteId = request.RouteId,        
+        FarePaid = boarding.Routes.Price,
+        PurchasedOn = DateTime.UtcNow,
+        UserId = userId
+    };
+    boarding.Seat -= 1;
+    await db.AddAsync(ticket);
+    await db.SaveChangesAsync();
+    return Results.Created();
 
-
-// });
+});
 //tickets.MapPut
 //tickets.MapGet
 //tickets.MapDelete
