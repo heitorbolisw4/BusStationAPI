@@ -69,7 +69,7 @@ Prioridade (MoSCoW): **M**ust · **S**hould · **C**ould · **W**on't (agora)
 | RF-03 | Usuário deve poder logar com e-mail/senha e receber um JWT | M | ✅ |
 | RF-04 | Usuário autenticado deve poder ver seu próprio perfil | M | ✅ |
 | RF-05 | Usuário autenticado deve poder atualizar nome/e-mail/idade | S | ✅ |
-| RF-06 | Usuário deve poder excluir a própria conta | C | ⬜ (endpoint comentado) |
+| RF-06 | Usuário deve poder excluir a própria conta | C | ✅ (endpoint comentado) |
 | RF-07 | Usuário deve poder trocar senha | S | ⬜ |
 | RF-08 | Recuperação de senha (esqueci minha senha) | C | ⬜ |
 

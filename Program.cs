@@ -212,7 +212,24 @@ user.MapPut("/profile", async (AppDbContext db, ClaimsPrincipal user, UpdateUser
    return Results.NoContent();
 
 });
-//users.MapDelete
+user.MapDelete("/delete/{id:int}", async (int id,AppDbContext db, ClaimsPrincipal user) =>
+{
+   var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+   if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+
+    
+    var profile = await db.Users.FirstOrDefaultAsync(x => x.Id == userId && x.Id == id);
+    if(profile is null)
+        return Results.NotFound();
+
+    db.Remove(profile);
+    await db.SaveChangesAsync();
+    return Results.Created();
+
+
+});
 #endregion
 
 
@@ -660,6 +677,7 @@ tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto reques
         RouteId = request.RouteId,        
         FarePaid = boarding.Routes.Price,
         PurchasedOn = DateTime.UtcNow,
+        BoardingDate = boarding.BoardingDate,
         UserId = userId
     };
     boarding.Seat -= 1;
