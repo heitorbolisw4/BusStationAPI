@@ -14,6 +14,7 @@ namespace BusStation_API.Data
         {
         }
         public DbSet<User> Users { get; set; }
+        public DbSet<Admin> Admins { get; set; }
         public DbSet<Ticket> Tickets { get; set; }
         public DbSet<Distance> Distances { get; set; }
         public DbSet<Origin> Origins { get; set; }
@@ -25,6 +26,11 @@ namespace BusStation_API.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Admin>(entity =>
+            {
+               entity.HasKey(x => x.Id);
+               entity.HasIndex(x => x.Email).IsUnique();
+            });
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(u => u.Id);

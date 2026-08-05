@@ -9,40 +9,20 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace BusStation_API.Service
 {
-    public class TokenService : ITokenService
+    public class TokenService
     {
-        private readonly IConfiguration _config;
-        private readonly JwtSettings _jwtSettings;
 
-        public TokenService(IConfiguration config, IOptions<JwtSettings> jwtOptions)
+        public string GenerateToken(IEnumerable<Claim> claims, string issuer, string audience, string key, TimeSpan expirationTimeInMinutes)
         {
-            _config = config;
-            _jwtSettings = jwtOptions.Value;
-        }
 
-        public string GenerateToken(User user)
-        {
-            var secretKey = _jwtSettings.SecretKey;
-            var issuer = _jwtSettings.Issuer;
-            var audience = _jwtSettings.Audience;
-            var expirationTimeInMinutes = _jwtSettings.ExpirationTimeInMinutes;
-
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new List<Claim>()
-            {
-              new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-              new(ClaimTypes.Email, user.Email)  
-            };
-
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+            var creds = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
                 issuer: issuer,
                 audience: audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(expirationTimeInMinutes),
+                expires: DateTime.UtcNow.Add(expirationTimeInMinutes),
                 signingCredentials: creds
             );
 
@@ -50,4 +30,5 @@ namespace BusStation_API.Service
             
         }
     }
+
 }

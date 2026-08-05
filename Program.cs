@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BusStation_API.Data;
+using BusStation_API.DTO.Admin;
 using BusStation_API.DTO.Boarding;
 using BusStation_API.DTO.City;
 using BusStation_API.DTO.Destination;
@@ -29,29 +30,57 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
-var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+//builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.Configure<JwtUserOptions>(builder.Configuration.GetSection("JwtSettings:User"));
+builder.Services.Configure<JwtAdminOptions>(builder.Configuration.GetSection("JwtSettings:Admin"));
 
-builder.Services.AddSingleton<ITokenService, TokenService>();
+
+//var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+var adminJwt = builder.Configuration.GetSection("JwtSettings:Admin").Get<JwtAdminOptions>();
+var userJwt = builder.Configuration.GetSection("JwtSettings:User").Get<JwtUserOptions>();
+
+builder.Services.AddSingleton<TokenService>();
+builder.Services.AddSingleton<ITokenService<User>, UserTokenService>();
+builder.Services.AddSingleton<ITokenService<Admin>, AdminTokenService>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
+
+
 builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options => options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer("UserScheme",options =>
 {
 
    options.TokenValidationParameters = new TokenValidationParameters
    {
        ValidateIssuer = true,
+       ValidIssuer = userJwt!.Issuer,
+       
        ValidateAudience = true,
-       ValidateLifetime = true,
+       ValidAudience = userJwt!.Audience,
+       
        ValidateIssuerSigningKey = true,
-
+       IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(userJwt.SecretKey)),
+       
+       ValidateLifetime = true,
        ClockSkew = TimeSpan.Zero,
-       ValidAudience = jwtSettings!.Audience,
-       ValidIssuer = jwtSettings!.Issuer,
-       IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
-
+       
        NameClaimType = ClaimTypes.NameIdentifier
    }; 
+}).AddJwtBearer("AdminScheme",options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = adminJwt!.Issuer,
+
+        ValidateAudience = true,
+        ValidAudience = adminJwt.Audience,
+
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(adminJwt.SecretKey)),
+
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -81,23 +110,51 @@ builder.Services.AddSwaggerGen(c =>
         } 
     });
 });
-builder.Services.AddAuthorization();
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("UserPolicy", policy => 
+    {
+        policy.AuthenticationSchemes.Add("UserScheme");
+        policy.RequireAuthenticatedUser();    
+    });
+    options.AddPolicy("AdminPolicy", policy =>
+    {
+        policy.AuthenticationSchemes.Add("AdminScheme");
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("adm");
+    });
+});
+
+
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin", policy =>
+    {
+       policy.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod(); 
+    });
+
+
+});
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseCors("AllowSpecificOrigin");
 }
+
 
 #endregion
 
 
 
 #region Groups
-var user = app.MapGroup("/user").RequireAuthorization().WithTags("Users");
-var cities =  app.MapGroup("/cities").WithTags("Cities");
+var admin = app.MapGroup("/admin").WithTags("Admins");
+var user = app.MapGroup("/user").RequireAuthorization("UserPolicy").WithTags("Users");
+var cities =  app.MapGroup("/cities").RequireAuthorization("AdminPolicy").WithTags("Cities");
 var routes = app.MapGroup("/routes").WithTags("Routes");
 var distances =  app.MapGroup("/distances").WithTags("Distances");
 var origins = app.MapGroup("/origins").WithTags("Origins");
@@ -136,7 +193,7 @@ app.MapPost("/register", async (AppDbContext db, RegisterRequestDto request, IAu
 
     return Results.Created();
 });
-app.MapPost("/login", async (AppDbContext db, LoginRequestDto request, IAuthService authService, ITokenService tokenService) =>
+app.MapPost("/login", async (AppDbContext db, LoginRequestDto request, IAuthService authService, ITokenService<User> tokenService) =>
 {
     if(string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
         return Results.BadRequest("you must fill in all the fields");
@@ -156,7 +213,53 @@ app.MapPost("/login", async (AppDbContext db, LoginRequestDto request, IAuthServ
     });
 #endregion
 
+#region Admins
 
+admin.MapPost("/create", async (AppDbContext db, AdminRequestDto request, IAuthService service) =>
+{
+    if(string.IsNullOrWhiteSpace(request.Name) ||
+        string.IsNullOrWhiteSpace(request.Email) ||
+        string.IsNullOrWhiteSpace(request.Password) )
+        return Results.BadRequest();
+
+    //valido se email existe
+    var exists = await db.Admins.AnyAsync(x => x.Email ==  request.Email);
+    if(exists)
+        return Results.Conflict();
+
+    // faz o hash da senha
+    string doHashPassw = service.GenerateHash(request.Password);
+
+    Admin adm = new()
+    {
+        Name = request.Name,
+        Email = request.Email,
+        Password = doHashPassw
+    };
+    db.Add(adm);
+    await db.SaveChangesAsync();
+    return Results.Created();
+});
+
+admin.MapPost("/login", async (AppDbContext db, LoginAdminRequestDto request, IAuthService service, ITokenService<Admin> tokenService) =>
+{
+    if(string.IsNullOrWhiteSpace(request.Email) ||
+        string.IsNullOrWhiteSpace(request.Password) )
+        return Results.BadRequest();
+
+    var adm = await db.Admins.FirstOrDefaultAsync(x => x.Email == request.Email);
+    if(adm is null)
+        return Results.NotFound();
+    
+    bool passw = service.PasswordVerify(request.Password, adm.Password);
+    if(!passw)
+        return Results.Unauthorized();
+
+    var token = tokenService.GenerateToken(adm);
+    return Results.Ok(new {token});
+});
+
+#endregion
 
 
 #region Users
@@ -230,6 +333,28 @@ user.MapDelete("/delete/{id:int}", async (int id,AppDbContext db, ClaimsPrincipa
 
 
 });
+user.MapPatch("/password", async (AppDbContext db, ClaimsPrincipal user, IAuthService service ,UpdatePasswRequestDto request) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    var profile = await db.Users.SingleOrDefaultAsync(x => x.Id == userId);
+    if(profile is null)
+        return Results.NotFound();
+
+    var passw = service.PasswordVerify(request.Password, profile.Password);
+    if(!passw)
+        return Results.Unauthorized();
+
+    var doHashPassw = service.GenerateHash(request.NewPassword);
+    
+    profile.Password = doHashPassw;
+    
+    await db.SaveChangesAsync();
+    return Results.Created();
+});
+
 #endregion
 
 
@@ -242,7 +367,7 @@ cities.MapPost("/create", async (AppDbContext db, CreateCityRequestDto request) 
         string.IsNullOrWhiteSpace(request.Acronym))
         return Results.BadRequest();
 
-    var Exists = await db.City.AnyAsync( c => c.State == request.Acronym);
+    var Exists = await db.City.AnyAsync( c => c.CityName == request.CityName);
     if(Exists)
         return Results.Conflict();
 
