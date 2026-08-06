@@ -7,6 +7,9 @@ appsettings.Development.json
 # dotenv files
 .env
 
+#testes
+autocommit.sh
+
 # User-specific files
 *.rsuser
 *.suo
