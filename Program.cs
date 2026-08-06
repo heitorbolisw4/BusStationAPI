@@ -155,13 +155,13 @@ if (app.Environment.IsDevelopment())
 var admin = app.MapGroup("/admin").WithTags("Admins");
 var user = app.MapGroup("/user").RequireAuthorization("UserPolicy").WithTags("Users");
 var cities =  app.MapGroup("/cities").RequireAuthorization("AdminPolicy").WithTags("Cities");
-var routes = app.MapGroup("/routes").WithTags("Routes");
-var distances =  app.MapGroup("/distances").WithTags("Distances");
-var origins = app.MapGroup("/origins").WithTags("Origins");
-var destination = app.MapGroup("/destination").WithTags("Destinations");
-var distance = app.MapGroup("/distance").WithTags("Distances");
+var routes = app.MapGroup("/routes").RequireAuthorization("AdminPolicy").WithTags("Routes");
+var distances =  app.MapGroup("/distances").RequireAuthorization("AdminPolicy").WithTags("Distances");
+var origins = app.MapGroup("/origins").RequireAuthorization("AdminPolicy").WithTags("Origins");
+var destination = app.MapGroup("/destination").RequireAuthorization("AdminPolicy").WithTags("Destinations");
+var distance = app.MapGroup("/distance").RequireAuthorization("AdminPolicy").WithTags("Distances");
 var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
-var prices = app.MapGroup("/prices").WithTags("Prices");
+var prices = app.MapGroup("/prices").RequireAuthorization("AdminPolicy").WithTags("Prices");
 var boardings = app.MapGroup("/boardings");
 #endregion
 
@@ -730,7 +730,6 @@ boardings.MapPost("/create", async (AppDbContext db, CreateBoardingRequestDto re
 });
 #endregion
 
-
 #region Prices
 prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request) =>
 {
@@ -757,11 +756,48 @@ prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request)
 
 
 });
-//prices.MapPut
-//prices.MapGet
+prices.MapPatch("/update/{id:int}", async (int id, AppDbContext db, UpdatePriceRequestDto request) =>
+{
+    if(request.NewPrice <= 0 || request.DistanceId <= 0)
+        return Results.BadRequest();
+
+    var price = await db.Prices.FirstOrDefaultAsync(x => x.Id == id && x.DistanceId == request.DistanceId);
+    if(price is null)
+        return Results.NotFound();
+
+    price.PricePerKm = request.NewPrice;
+
+    var route = await db.Routes.Where(x => x.DistanceId == request.DistanceId).Include(y => y.Distance).SingleOrDefaultAsync();
+    if(route is null || route.Distance is null)
+        return Results.NotFound();
+    
+    if(route.Distance.Id != request.DistanceId)
+        return Results.NotFound();
+
+    
+    var newPrice = price.PricePerKm * route.Distance.Kilometers;
+    route.Price = newPrice;
+
+    await db.SaveChangesAsync();
+    return Results.Created();
+    
+});
+prices.MapGet("/list", async (AppDbContext db) =>
+{
+    var prices = await db.Prices.Select( x => new ListPricesRequestDto
+    {
+        PricePerKm = x.PricePerKm,
+        DistanceId = x.DistanceId
+
+    }).ToListAsync();
+    if(prices is null)
+        return Results.NotFound();
+
+
+    return Results.Ok(prices);
+});
 //prices.MapDelete
 #endregion
-
 
 #region Tickets
 tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto request, ClaimsPrincipal user) =>
