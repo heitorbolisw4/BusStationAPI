@@ -162,7 +162,7 @@ var destination = app.MapGroup("/destination").RequireAuthorization("AdminPolicy
 var distance = app.MapGroup("/distance").RequireAuthorization("AdminPolicy").WithTags("Distances");
 var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
 var prices = app.MapGroup("/prices").RequireAuthorization("AdminPolicy").WithTags("Prices");
-var boardings = app.MapGroup("/boardings");
+var boardings = app.MapGroup("/boardings").WithTags("Boardings");
 #endregion
 
 
@@ -397,7 +397,7 @@ cities.MapGet("/list", async (AppDbContext db) =>
         return Results.NotFound();
 
     return Results.Ok(response);
-});
+}).AllowAnonymous(); // catálogo é público: o cliente precisa escolher origem/destino antes de existir login
 cities.MapPut("/update/{id:int}", async (int id, AppDbContext db, UpdateCityRequestDto request) =>
 {
     // valida se id da cidade à ser alterada existe -> return 404
@@ -728,6 +728,58 @@ boardings.MapPost("/create", async (AppDbContext db, CreateBoardingRequestDto re
     return Results.Created();
 
 });
+
+boardings.MapGet("/search", async (AppDbContext db, int originCityId, int destinationCityId, DateOnly date) =>
+{
+    // valido request -> return 400
+    if(originCityId <= 0 || destinationCityId <= 0 || originCityId == destinationCityId)
+        return Results.BadRequest();
+
+    var now = DateTime.Now;
+    var today = DateOnly.FromDateTime(now);
+
+    // valido data -> return 400
+    if(date < today)
+        return Results.BadRequest();
+
+    // se a busca é para hoje, saída que já partiu não interessa ao cliente
+    var minTime = date == today ? TimeOnly.FromDateTime(now) : TimeOnly.MinValue;
+
+    var departures = await db.Boardings
+        .Where(b => b.BoardingDate == date
+                 && b.BoardingTime >= minTime
+                 && b.Seat > 0
+                 && b.Routes!.Distance!.Origin!.CityId == originCityId
+                 && b.Routes.Distance.Destination!.CityId == destinationCityId)
+        .OrderBy(b => b.BoardingTime)
+        .Select(b => new SearchBoardingResponseDto
+        {
+            BoardingId = b.Id,
+            RouteId = b.RouteId,
+            RouteName = b.Routes!.RouteName,
+
+            OriginCity = b.Routes.Distance!.Origin!.City!.CityName,
+            OriginAcronym = b.Routes.Distance.Origin.City.Acronym,
+            DestinationCity = b.Routes.Distance.Destination!.City!.CityName,
+            DestinationAcronym = b.Routes.Distance.Destination.City.Acronym,
+
+            Kilometers = b.Routes.Distance.Kilometers,
+            BoardingDate = b.BoardingDate,
+            BoardingTime = b.BoardingTime,
+            Seats = b.Seat,
+            Price = b.Routes.Price
+        })
+        .ToListAsync();
+
+    // Faltando de propósito: `&& b.Routes!.IsActive`. POST /routes/create nunca
+    // seta IsActive, então toda rota no banco está com false — o filtro
+    // devolveria lista vazia sempre. Acrescente aqui quando o create setar true.
+
+    // Lista vazia é busca bem-sucedida com zero resultados, não erro:
+    // 200 com [] deixa o front escrever "nenhuma saída nesse dia".
+    return Results.Ok(departures);
+});
+
 #endregion
 
 #region Prices

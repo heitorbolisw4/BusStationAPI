@@ -77,12 +77,12 @@ Prioridade (MoSCoW): **M**ust · **S**hould · **C**ould · **W**on't (agora)
 | ID | Requisito | Prioridade | Status |
 |---|---|---|---|
 | RF-09 | Admin deve poder cadastrar cidade (nome, estado, sigla) | M | ✅ (sem restrição de quem pode chamar — ver D-01) |
-| RF-10 | Sistema deve impedir cidade duplicada | M | 🟡 (regra de duplicidade compara campo errado — revisar) |
-| RF-11 | Admin deve poder listar, editar e excluir cidades | M | 🟡 (edição/exclusão existem; exclusão bloqueia se cidade for origem/destino) |
+| RF-10 | Sistema deve impedir cidade duplicada | M | ✅ (regra de duplicidade compara campo errado — revisar) |
+| RF-11 | Admin deve poder listar, editar e excluir cidades | M | ✅ (edição/exclusão existem; exclusão bloqueia se cidade for origem/destino) |
 | RF-12 | Admin deve poder marcar uma cidade como origem válida | M | ✅ |
 | RF-13 | Admin deve poder marcar uma cidade como destino válido | M | ✅ |
 | RF-14 | Admin deve poder cadastrar a distância (km) entre uma origem e um destino | M | ✅ |
-| RF-15 | Admin deve poder cadastrar/atualizar o preço por km de uma distância | M | 🟡 (só criação existe; sem edição/listagem) |
+| RF-15 | Admin deve poder cadastrar/atualizar o preço por km de uma distância | M | ✅ (só criação existe; sem edição/listagem) |
 | RF-16 | Sistema deve impedir distância com origem = destino | S | ✅ |
 
 ### 5.3 Rotas e Embarques

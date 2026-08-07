@@ -9,6 +9,7 @@ appsettings.Development.json
 
 #testes
 autocommit.sh
+autocommit
 
 # User-specific files
 *.rsuser
