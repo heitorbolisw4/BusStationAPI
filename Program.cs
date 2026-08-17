@@ -13,6 +13,7 @@ using BusStation_API.DTO.Price;
 using BusStation_API.DTO.Route;
 using BusStation_API.DTO.Ticket;
 using BusStation_API.DTO.User;
+using BusStation_API.Endpoints;
 using BusStation_API.Entities;
 using BusStation_API.Interface;
 using BusStation_API.Jwt;
@@ -166,52 +167,6 @@ var boardings = app.MapGroup("/boardings").WithTags("Boardings");
 #endregion
 
 
-#region Public
-app.MapPost("/register", async (AppDbContext db, RegisterRequestDto request, IAuthService service) =>
-{
-    if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
-        return Results.BadRequest("You must fill in all the fields");
-
-    if(request.Age < 18)
-        return Results.BadRequest("You must be of legal age");
-
-    bool emailExists = await db.Users.AnyAsync(u => u.Email == request.Email);
-    if(emailExists)
-        return Results.Conflict("The Email already exists");
-
-    string doHashPassw = service.GenerateHash(request.Password);
-
-    User user = new()
-    {
-        Name = request.Name,
-        Age = request.Age,
-        Email = request.Email,
-        Password = doHashPassw
-    };
-    db.Users.Add(user);
-    await db.SaveChangesAsync();
-
-    return Results.Created();
-});
-app.MapPost("/login", async (AppDbContext db, LoginRequestDto request, IAuthService authService, ITokenService<User> tokenService) =>
-{
-    if(string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
-        return Results.BadRequest("you must fill in all the fields");
-
-    var user = await db.Users.SingleOrDefaultAsync(u => u.Email == request.Email);
-    if(user is null)
-        return Results.Unauthorized();
-    
-    string passw =  user.Password;
-    bool passwVerify = authService.PasswordVerify(request.Password, passw);
-    if(!passwVerify)
-        return Results.Unauthorized();
-    
-    var token = tokenService.GenerateToken(user);
-    return Results.Ok(new {token});
-
-    });
-#endregion
 
 #region Admins
 
@@ -239,24 +194,6 @@ admin.MapPost("/create", async (AppDbContext db, AdminRequestDto request, IAuthS
     db.Add(adm);
     await db.SaveChangesAsync();
     return Results.Created();
-});
-
-admin.MapPost("/login", async (AppDbContext db, LoginAdminRequestDto request, IAuthService service, ITokenService<Admin> tokenService) =>
-{
-    if(string.IsNullOrWhiteSpace(request.Email) ||
-        string.IsNullOrWhiteSpace(request.Password) )
-        return Results.BadRequest();
-
-    var adm = await db.Admins.FirstOrDefaultAsync(x => x.Email == request.Email);
-    if(adm is null)
-        return Results.NotFound();
-    
-    bool passw = service.PasswordVerify(request.Password, adm.Password);
-    if(!passw)
-        return Results.Unauthorized();
-
-    var token = tokenService.GenerateToken(adm);
-    return Results.Ok(new {token});
 });
 
 #endregion
@@ -360,27 +297,6 @@ user.MapPatch("/password", async (AppDbContext db, ClaimsPrincipal user, IAuthSe
 
 
 #region Cities
-cities.MapPost("/create", async (AppDbContext db, CreateCityRequestDto request) =>
-{
-    if(string.IsNullOrWhiteSpace(request.CityName) ||
-        string.IsNullOrWhiteSpace(request.State) ||
-        string.IsNullOrWhiteSpace(request.Acronym))
-        return Results.BadRequest();
-
-    var Exists = await db.City.AnyAsync( c => c.CityName == request.CityName);
-    if(Exists)
-        return Results.Conflict();
-
-    City city = new City
-    {
-        CityName = request.CityName,
-        State = request.State,
-        Acronym = request.Acronym
-    };
-    await db.AddAsync(city);
-    await db.SaveChangesAsync();
-    return Results.Created();
-});
 cities.MapGet("/list", async (AppDbContext db) =>
 {
 
@@ -906,4 +822,7 @@ tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto reques
 
 app.MapSwagger();
 
+
+app.MapAuthEndpoints();
+app.MapCitiesEnpoints();
 app.Run();
