@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 using BusStation_API.Data;
 using BusStation_API.DTO.Admin;
 using BusStation_API.DTO.Boarding;
-using BusStation_API.DTO.City;
 using BusStation_API.DTO.Destination;
 using BusStation_API.DTO.Distance;
 using BusStation_API.DTO.Origin;
@@ -153,17 +152,17 @@ if (app.Environment.IsDevelopment())
 
 
 #region Groups
-var admin = app.MapGroup("/admin").WithTags("Admins");
 var user = app.MapGroup("/user").RequireAuthorization("UserPolicy").WithTags("Users");
+var admin = app.MapGroup("/admin").WithTags("Admins");
 var cities =  app.MapGroup("/cities").RequireAuthorization("AdminPolicy").WithTags("Cities");
 var routes = app.MapGroup("/routes").RequireAuthorization("AdminPolicy").WithTags("Routes");
-var distances =  app.MapGroup("/distances").RequireAuthorization("AdminPolicy").WithTags("Distances");
-var origins = app.MapGroup("/origins").RequireAuthorization("AdminPolicy").WithTags("Origins");
-var destination = app.MapGroup("/destination").RequireAuthorization("AdminPolicy").WithTags("Destinations");
-var distance = app.MapGroup("/distance").RequireAuthorization("AdminPolicy").WithTags("Distances");
-var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
 var prices = app.MapGroup("/prices").RequireAuthorization("AdminPolicy").WithTags("Prices");
+var origins = app.MapGroup("/origins").RequireAuthorization("AdminPolicy").WithTags("Origins");
+var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
+var distance = app.MapGroup("/distance").RequireAuthorization("AdminPolicy").WithTags("Distances");
+var distances =  app.MapGroup("/distances").RequireAuthorization("AdminPolicy").WithTags("Distances");
 var boardings = app.MapGroup("/boardings").WithTags("Boardings");
+var destination = app.MapGroup("/destination").RequireAuthorization("AdminPolicy").WithTags("Destinations");
 #endregion
 
 
@@ -296,77 +295,7 @@ user.MapPatch("/password", async (AppDbContext db, ClaimsPrincipal user, IAuthSe
 
 
 
-#region Cities
-cities.MapGet("/list", async (AppDbContext db) =>
-{
 
-    var response = await db.City.Select( r => new GetCityResponseDto
-    {
-        Id = r.Id,
-        CityName = r.CityName,
-        State = r.State,
-        Acronym = r.Acronym
-
-    }).ToListAsync();
-
-    if(response is null)
-        return Results.NotFound();
-
-    return Results.Ok(response);
-}).AllowAnonymous(); // catálogo é público: o cliente precisa escolher origem/destino antes de existir login
-cities.MapPut("/update/{id:int}", async (int id, AppDbContext db, UpdateCityRequestDto request) =>
-{
-    // valida se id da cidade à ser alterada existe -> return 404
-    var city = await db.City.SingleOrDefaultAsync(x => x.Id == id);
-    if(city is null)
-        return Results.NotFound();
-    
-    
-    // validar request -> return 400
-    if(string.IsNullOrWhiteSpace(request.CityName) ||
-        string.IsNullOrWhiteSpace(request.State) ||
-        string.IsNullOrWhiteSpace(request.Acronym))
-        return Results.BadRequest();
-    
-    
-    
-    // validar se ja existe cidade & estado com o mesmo nome -> return 409
-    var exists = await db.City
-                .AnyAsync(x =>
-                        x.CityName == request.CityName &&
-                        x.State == request.State);
-    if(exists)
-        return Results.Conflict();
-
-
-    // salvo no banco -> return 204
-    city.CityName = request.CityName;
-    city.State = request.State;
-    city.Acronym = request.Acronym;
-    await db.SaveChangesAsync();
-    return Results.NoContent();
-});
-cities.MapDelete("/delete/{id:int}", async (int id, AppDbContext db) =>
-{
-    var city = await db.City.FirstOrDefaultAsync(x => x.Id == id);
-    if( city is null )
-        return Results.NotFound();
-
-
-
-    // se cidade for uma origem ou destino
-    var exists = await db.Origins.AnyAsync(x => x.CityId == id) ||
-                 await db.Destinations.AnyAsync(x => x.CityId == id);
-    if(exists)
-        return Results.Conflict();
-
-    db.Remove(city);
-    await db.SaveChangesAsync();
-    return Results.NoContent();
-
-
-});
-#endregion
 
 
 
