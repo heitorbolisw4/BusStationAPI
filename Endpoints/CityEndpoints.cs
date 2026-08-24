@@ -70,8 +70,8 @@ namespace BusStation_API.Endpoints
 
 
             // verifico se city é uma origem e um destino
-            var exists =    await db.Origins.AnyAsync(x => x.CityId == id) ||
-                            await db.Destinations.AnyAsync(x => x.CityId == id);
+            var exists =    await db.Distances.AnyAsync(x => x.OriginCityId == id) ||
+                            await db.Distances.AnyAsync(x => x.DestinationCityId == id);
 
             if(exists)
                 return Results.Conflict();

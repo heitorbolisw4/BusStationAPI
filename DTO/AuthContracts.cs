@@ -6,4 +6,7 @@ namespace BusStation_API.DTO
     //admin
     public record AdminRegisterRequest(string Name, string Email, string Password);
     public record AdminLoginRequest(string Email, string Password);
+
+    //user
+    public record DriverProfileResponse(string Name, string Email, int Age);
 }

@@ -17,9 +17,7 @@ namespace BusStation_API.Data
         public DbSet<Admin> Admins { get; set; }
         public DbSet<Ticket> Tickets { get; set; }
         public DbSet<Distance> Distances { get; set; }
-        public DbSet<Origin> Origins { get; set; }
         public DbSet<Route> Routes { get; set; }
-        public DbSet<Destination> Destinations { get; set; }
         public DbSet<City> City {get;set;}
         public DbSet<Price> Prices { get; set; }
         public DbSet<Boarding> Boardings { get; set; }
@@ -49,39 +47,20 @@ namespace BusStation_API.Data
             modelBuilder.Entity<Distance>(entity =>
             {
                 entity.HasKey(d => d.Id);
-                entity.HasOne(d => d.Origin).WithMany(d => d.Distances).HasForeignKey(d => d.OriginId);
-                entity.HasOne(d => d.Destination).WithMany(d => d.Distances).HasForeignKey(d => d.DestinationId);
+                entity.HasOne(x => x.OriginCity).WithMany(x => x.OriginCities).HasForeignKey(x => x.OriginCityId);
+                entity.HasOne(x => x.DestinationCity).WithMany(x => x.DestinationCities).HasForeignKey(x => x.DestinationCityId);
+
+
                 entity.HasData(
-                    new Distance {Id = 1, OriginId = 1 ,DestinationId = 2, Kilometers = 60},
-                    new Distance {Id = 2, OriginId = 2 ,DestinationId = 1, Kilometers = 60},
-                    new Distance {Id = 3, OriginId = 2 ,DestinationId = 3, Kilometers = 45},
-                    new Distance {Id = 4, OriginId = 3 ,DestinationId = 2, Kilometers = 45},
-                    new Distance {Id = 5, OriginId = 2 ,DestinationId = 4, Kilometers = 100},
-                    new Distance {Id = 6, OriginId = 4 ,DestinationId = 2, Kilometers = 100}
+                    new Distance {Id = 1, OriginCityId = 1 ,DestinationCityId = 2, Kilometers = 60},
+                    new Distance {Id = 2, OriginCityId = 2 ,DestinationCityId = 1, Kilometers = 60},
+                    new Distance {Id = 3, OriginCityId = 2 ,DestinationCityId = 3, Kilometers = 45},
+                    new Distance {Id = 4, OriginCityId = 3 ,DestinationCityId = 2, Kilometers = 45},
+                    new Distance {Id = 5, OriginCityId = 2 ,DestinationCityId = 4, Kilometers = 100},
+                    new Distance {Id = 6, OriginCityId = 4 ,DestinationCityId = 2, Kilometers = 100}
                 );
             });
-            modelBuilder.Entity<Origin>(entity =>
-            {
-                entity.HasKey(o => o.Id);
-                entity.HasOne(o => o.City).WithMany(c => c.Origins).HasForeignKey(o => o.CityId);
-                entity.HasData(
-                    new Origin {Id = 1,CityId = 1, CityAcronym = "Indi"},
-                    new Origin {Id = 2,CityId = 2, CityAcronym = "Udia"},
-                    new Origin {Id = 3,CityId = 3, CityAcronym = "Reri"},
-                    new Origin {Id = 4,CityId = 4, CityAcronym = "Ura"}
-                );
-            });
-            modelBuilder.Entity<Destination>(entity =>
-            {
-                entity.HasKey(d => d.Id);
-                entity.HasOne(d => d.City).WithMany(c => c.Destinations).HasForeignKey(d => d.CityId);
-                entity.HasData(
-                    new Destination {Id = 1,CityId = 1, CityAcronym = "Indi"},
-                    new Destination {Id = 2,CityId = 2, CityAcronym = "Udia"},
-                    new Destination {Id = 3,CityId = 3, CityAcronym = "Reri"},
-                    new Destination {Id = 4,CityId = 4, CityAcronym = "Ura"}
-                );
-            });
+
             
             modelBuilder.Entity<Route>(entity =>
             {
@@ -104,6 +83,7 @@ namespace BusStation_API.Data
                     new City{Id = 4, CityName = "Uberaba", Acronym = "Ura",State = "MG"}
 
                 );
+
 
 
             });

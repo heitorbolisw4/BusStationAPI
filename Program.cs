@@ -11,7 +11,6 @@ using BusStation_API.DTO.Origin;
 using BusStation_API.DTO.Price;
 using BusStation_API.DTO.Route;
 using BusStation_API.DTO.Ticket;
-using BusStation_API.DTO.User;
 using BusStation_API.Endpoints;
 using BusStation_API.Entities;
 using BusStation_API.Interface;
@@ -197,261 +196,68 @@ admin.MapPost("/create", async (AppDbContext db, AdminRequestDto request, IAuthS
 
 #endregion
 
-
-#region Users
-user.MapGet("/me", async (AppDbContext db, ClaimsPrincipal user) =>
-{
-    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
-    if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        return Results.Unauthorized();
-
-    var profile = await db.Users.SingleOrDefaultAsync(u => u.Id == userId);
-    if (profile is null)
-        return Results.NotFound();
-
-    var response = new UserResponseDto
-    {
-        Name = profile.Name,
-        Email = profile.Email,
-        Age = profile.Age
-    };
-    return Results.Ok(response);
-
-});
-user.MapPut("/profile", async (AppDbContext db, ClaimsPrincipal user, UpdateUserRequestDto request) =>
-{
-   //verifico o id do user -> retorna 401
-    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
-    if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        return Results.Unauthorized();
-   
-   // verifico se user existe no banco -> retorna 404
-    var profile = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-    if(profile is null)
-        return Results.NotFound();
-
-   
-   
-   // verifico request -> retorna 400
-    if(string.IsNullOrWhiteSpace(request.Email) ||
-    string.IsNullOrWhiteSpace(request.Name) ||
-    request.Age < 18)
-    return Results.BadRequest();
-
-   // verifico se email ja é existente no banco -> retorna 409
-    var mailExists = await db.Users.AnyAsync(u => u.Email == request.Email);
-    if(mailExists)
-        return Results.Conflict();
-
-   //atualizo os dados e retorno 204
-   profile.Email = request.Email;
-   profile.Name = request.Name;
-   profile.Age = request.Age;
-   await db.SaveChangesAsync();
-   return Results.NoContent();
-
-});
-user.MapDelete("/delete/{id:int}", async (int id,AppDbContext db, ClaimsPrincipal user) =>
-{
-   var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
-   if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        return Results.Unauthorized();
-
+// #region Distance
+// distance.MapPost("/create", async (AppDbContext db, CreateDistanceRequestDto request) =>
+// {
+//     //validar claims -> return 401
 
     
-    var profile = await db.Users.FirstOrDefaultAsync(x => x.Id == userId && x.Id == id);
-    if(profile is null)
-        return Results.NotFound();
-
-    db.Remove(profile);
-    await db.SaveChangesAsync();
-    return Results.Created();
+//     // validar request -> return 400
+//     if(request.OriginId <= 0 ||
+//         request.DestinationId <= 0 ||
+//         request.Kilometers <= 0)
+//         return Results.BadRequest();
 
 
-});
-user.MapPatch("/password", async (AppDbContext db, ClaimsPrincipal user, IAuthService service ,UpdatePasswRequestDto request) =>
-{
-    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
-    if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        return Results.Unauthorized();
+//     var origin = await db.Origins.AnyAsync(o => o.Id == request.OriginId);
+//     var destination = await db.Destinations.AnyAsync(d => d.Id == request.DestinationId);
+//     if(!destination || !origin)
+//         return Results.NotFound();
 
-    var profile = await db.Users.SingleOrDefaultAsync(x => x.Id == userId);
-    if(profile is null)
-        return Results.NotFound();
+//     if(request.OriginId == request.DestinationId)
+//         return Results.BadRequest();
 
-    var passw = service.PasswordVerify(request.Password, profile.Password);
-    if(!passw)
-        return Results.Unauthorized();
+//     // validar conflito -> return 409
+//     bool exists = await db.Distances
+//         .AnyAsync(d => d.OriginId == request.OriginId &&
+//                         d.DestinationId == request.DestinationId);
 
-    var doHashPassw = service.GenerateHash(request.NewPassword);
-    
-    profile.Password = doHashPassw;
-    
-    await db.SaveChangesAsync();
-    return Results.Created();
-});
-
-#endregion
+//     if(exists)
+//         return Results.Conflict();
 
 
+//     Distance distance = new Distance
+//     {
+//         OriginId = request.OriginId,
+//         DestinationId = request.DestinationId,
+//         Kilometers = request.Kilometers
 
+//     };
+//     await db.Distances.AddAsync(distance);
+//     await db.SaveChangesAsync();
+//     return Results.Created();
 
 
 
+// });
+// distance.MapGet("/list", async (AppDbContext db) =>
+// {
+//     var distance = await db.Distances.Select(d => new GetDistanceResponseDto
+//     {
+//         Id = d.Id,
+//         OriginId = d.OriginId,
+//         DestinationId = d.DestinationId,
+//         Kilometers = d.Kilometers
 
+//     }).ToListAsync();
+//     if(distance is null)
+//         return Results.NotFound();
 
-#region Origins
-origins.MapPost("/create", async (AppDbContext db, CreateOriginRequestDto request) =>
-{
-    if(request.CityId <= 0)
-        return Results.BadRequest();
-
-    var city = await db.City.SingleAsync(c => c.Id == request.CityId);
-    if(city is null)
-        return Results.NotFound();
-  
-    var exists = await db.Origins.AnyAsync( o => o.CityId == request.CityId);
-    if(exists)
-        return Results.Conflict();
-
-
-    Origin origin = new Origin
-    {
-        CityId = request.CityId
-    };
-    await db.AddAsync(origin);
-    await db.SaveChangesAsync();
-    return Results.Created();
-
-
-    
-});
-origins.MapGet("/list", async (AppDbContext db) =>
-{
-    var response = await db.Origins.Include(r => r.City).Select( r => new GetOriginResponseDto
-    {
-        Id = r.Id,
-        CityAcronym = r.City!.Acronym,
-        CityId = r.CityId
-    }).ToListAsync();
-
-    return Results.Ok(response);
-});
-//origins.MapPut
-//origins.MapDelete
-#endregion
-
-
-
-
-#region Destination
-destination.MapPost("/create", async (AppDbContext db, CreateDestinationRequestDto request) =>
-{
-    if(request.CityId <= 0)
-        return Results.BadRequest();
-
-    var city = await db.City.SingleAsync(c => c.Id == request.CityId);
-    if(city is null)
-        return Results.NotFound();
-
-
-    var exists = await db.Destinations.AnyAsync( d => d.CityId == request.CityId);
-    if(exists)
-        return Results.Conflict();
-
-    Destination destination = new Destination
-    {
-        CityId = request.CityId
-    };
-
-    await db.AddAsync(destination);
-    await db.SaveChangesAsync();
-    return Results.Created();
-
-});
-destination.MapGet("/list", async (AppDbContext db) =>
-{
-    var response = await db.Destinations.Include(r => r.City).Select( r => new GetDestinationDestinationDto
-    {
-        Id = r.Id,
-        CityAcronym = r.City!.Acronym,
-        CityId = r.CityId
-    }).ToListAsync();  
-
-    if(response is null)
-        return Results.NotFound();
-
-    return Results.Ok(response);
-});
-//destination.MapPut
-//destination.MapDelete
-#endregion
-
-
-
-
-#region Distance
-distance.MapPost("/create", async (AppDbContext db, CreateDistanceRequestDto request) =>
-{
-    //validar claims -> return 401
-
-    
-    // validar request -> return 400
-    if(request.OriginId <= 0 ||
-        request.DestinationId <= 0 ||
-        request.Kilometers <= 0)
-        return Results.BadRequest();
-
-
-    var origin = await db.Origins.AnyAsync(o => o.Id == request.OriginId);
-    var destination = await db.Destinations.AnyAsync(d => d.Id == request.DestinationId);
-    if(!destination || !origin)
-        return Results.NotFound();
-
-    if(request.OriginId == request.DestinationId)
-        return Results.BadRequest();
-
-    // validar conflito -> return 409
-    bool exists = await db.Distances
-        .AnyAsync(d => d.OriginId == request.OriginId &&
-                        d.DestinationId == request.DestinationId);
-
-    if(exists)
-        return Results.Conflict();
-
-
-    Distance distance = new Distance
-    {
-        OriginId = request.OriginId,
-        DestinationId = request.DestinationId,
-        Kilometers = request.Kilometers
-
-    };
-    await db.Distances.AddAsync(distance);
-    await db.SaveChangesAsync();
-    return Results.Created();
-
-
-
-});
-distance.MapGet("/list", async (AppDbContext db) =>
-{
-    var distance = await db.Distances.Select(d => new GetDistanceResponseDto
-    {
-        Id = d.Id,
-        OriginId = d.OriginId,
-        DestinationId = d.DestinationId,
-        Kilometers = d.Kilometers
-
-    }).ToListAsync();
-    if(distance is null)
-        return Results.NotFound();
-
-    return Results.Ok(distance);
-});
-//distance.MapPut
-//distance.MapDelete
-#endregion
+//     return Results.Ok(distance);
+// });
+// //distance.MapPut
+// //distance.MapDelete
+// #endregion
 
 
 
@@ -574,56 +380,56 @@ boardings.MapPost("/create", async (AppDbContext db, CreateBoardingRequestDto re
 
 });
 
-boardings.MapGet("/search", async (AppDbContext db, int originCityId, int destinationCityId, DateOnly date) =>
-{
-    // valido request -> return 400
-    if(originCityId <= 0 || destinationCityId <= 0 || originCityId == destinationCityId)
-        return Results.BadRequest();
+// boardings.MapGet("/search", async (AppDbContext db, int originCityId, int destinationCityId, DateOnly date) =>
+// {
+//     // valido request -> return 400
+//     if(originCityId <= 0 || destinationCityId <= 0 || originCityId == destinationCityId)
+//         return Results.BadRequest();
 
-    var now = DateTime.Now;
-    var today = DateOnly.FromDateTime(now);
+//     var now = DateTime.Now;
+//     var today = DateOnly.FromDateTime(now);
 
-    // valido data -> return 400
-    if(date < today)
-        return Results.BadRequest();
+//     // valido data -> return 400
+//     if(date < today)
+//         return Results.BadRequest();
 
-    // se a busca é para hoje, saída que já partiu não interessa ao cliente
-    var minTime = date == today ? TimeOnly.FromDateTime(now) : TimeOnly.MinValue;
+//     // se a busca é para hoje, saída que já partiu não interessa ao cliente
+//     var minTime = date == today ? TimeOnly.FromDateTime(now) : TimeOnly.MinValue;
 
-    var departures = await db.Boardings
-        .Where(b => b.BoardingDate == date
-                 && b.BoardingTime >= minTime
-                 && b.Seat > 0
-                 && b.Routes!.Distance!.Origin!.CityId == originCityId
-                 && b.Routes.Distance.Destination!.CityId == destinationCityId)
-        .OrderBy(b => b.BoardingTime)
-        .Select(b => new SearchBoardingResponseDto
-        {
-            BoardingId = b.Id,
-            RouteId = b.RouteId,
-            RouteName = b.Routes!.RouteName,
+//     var departures = await db.Boardings
+//         .Where(b => b.BoardingDate == date
+//                  && b.BoardingTime >= minTime
+//                  && b.Seat > 0
+//                  && b.Routes!.Distance!.Origin!.CityId == originCityId
+//                  && b.Routes.Distance.Destination!.CityId == destinationCityId)
+//         .OrderBy(b => b.BoardingTime)
+//         .Select(b => new SearchBoardingResponseDto
+//         {
+//             BoardingId = b.Id,
+//             RouteId = b.RouteId,
+//             RouteName = b.Routes!.RouteName,
 
-            OriginCity = b.Routes.Distance!.Origin!.City!.CityName,
-            OriginAcronym = b.Routes.Distance.Origin.City.Acronym,
-            DestinationCity = b.Routes.Distance.Destination!.City!.CityName,
-            DestinationAcronym = b.Routes.Distance.Destination.City.Acronym,
+//             OriginCity = b.Routes.Distance!.Origin!.City!.CityName,
+//             OriginAcronym = b.Routes.Distance.Origin.City.Acronym,
+//             DestinationCity = b.Routes.Distance.Destination!.City!.CityName,
+//             DestinationAcronym = b.Routes.Distance.Destination.City.Acronym,
 
-            Kilometers = b.Routes.Distance.Kilometers,
-            BoardingDate = b.BoardingDate,
-            BoardingTime = b.BoardingTime,
-            Seats = b.Seat,
-            Price = b.Routes.Price
-        })
-        .ToListAsync();
+//             Kilometers = b.Routes.Distance.Kilometers,
+//             BoardingDate = b.BoardingDate,
+//             BoardingTime = b.BoardingTime,
+//             Seats = b.Seat,
+//             Price = b.Routes.Price
+//         })
+//         .ToListAsync();
 
-    // Faltando de propósito: `&& b.Routes!.IsActive`. POST /routes/create nunca
-    // seta IsActive, então toda rota no banco está com false — o filtro
-    // devolveria lista vazia sempre. Acrescente aqui quando o create setar true.
+//     // Faltando de propósito: `&& b.Routes!.IsActive`. POST /routes/create nunca
+//     // seta IsActive, então toda rota no banco está com false — o filtro
+//     // devolveria lista vazia sempre. Acrescente aqui quando o create setar true.
 
-    // Lista vazia é busca bem-sucedida com zero resultados, não erro:
-    // 200 com [] deixa o front escrever "nenhuma saída nesse dia".
-    return Results.Ok(departures);
-});
+//     // Lista vazia é busca bem-sucedida com zero resultados, não erro:
+//     // 200 com [] deixa o front escrever "nenhuma saída nesse dia".
+//     return Results.Ok(departures);
+// });
 
 #endregion
 
@@ -753,5 +559,7 @@ app.MapSwagger();
 
 
 app.MapAuthEndpoints();
-app.MapCitiesEnpoints();
+user.MapUserEndpoints();
+cities.MapCitiesEnpoints();
+app.MapDistanceEndpoints();
 app.Run();
