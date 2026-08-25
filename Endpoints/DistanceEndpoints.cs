@@ -11,6 +11,7 @@ namespace BusStation_API.Endpoints
         {
             var group = app.MapGroup("/distances");
             group.MapPut("/create", CreateDistance);
+            group.MapGet("/list", ListDistances);
             return app;
         }
         
@@ -38,6 +39,16 @@ namespace BusStation_API.Endpoints
             await db.SaveChangesAsync();
             return Results.Created();
 
+        }
+
+        private static async Task<IResult> ListDistances(AppDbContext db)
+        {
+            var response = await db.Distances.Select(x => ToResponse(x)).ToListAsync();
+            return Results.Ok(response);
+        }
+        private static DistanceResponse ToResponse(Distance distance)
+        {
+            return new DistanceResponse(distance.Id, distance.OriginCityId, distance.DestinationCityId, distance.Kilometers);
         }
 
 

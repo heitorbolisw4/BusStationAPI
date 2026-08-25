@@ -154,7 +154,7 @@ if (app.Environment.IsDevelopment())
 var user = app.MapGroup("/user").RequireAuthorization("UserPolicy").WithTags("Users");
 var admin = app.MapGroup("/admin").WithTags("Admins");
 var cities =  app.MapGroup("/cities").RequireAuthorization("AdminPolicy").WithTags("Cities");
-var routes = app.MapGroup("/routes").RequireAuthorization("AdminPolicy").WithTags("Routes");
+var routes = app.MapGroup("/routes");//.RequireAuthorization("AdminPolicy").WithTags("Routes");
 var prices = app.MapGroup("/prices").RequireAuthorization("AdminPolicy").WithTags("Prices");
 var origins = app.MapGroup("/origins").RequireAuthorization("AdminPolicy").WithTags("Origins");
 var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
@@ -196,125 +196,9 @@ admin.MapPost("/create", async (AppDbContext db, AdminRequestDto request, IAuthS
 
 #endregion
 
-// #region Distance
-// distance.MapPost("/create", async (AppDbContext db, CreateDistanceRequestDto request) =>
-// {
-//     //validar claims -> return 401
-
-    
-//     // validar request -> return 400
-//     if(request.OriginId <= 0 ||
-//         request.DestinationId <= 0 ||
-//         request.Kilometers <= 0)
-//         return Results.BadRequest();
-
-
-//     var origin = await db.Origins.AnyAsync(o => o.Id == request.OriginId);
-//     var destination = await db.Destinations.AnyAsync(d => d.Id == request.DestinationId);
-//     if(!destination || !origin)
-//         return Results.NotFound();
-
-//     if(request.OriginId == request.DestinationId)
-//         return Results.BadRequest();
-
-//     // validar conflito -> return 409
-//     bool exists = await db.Distances
-//         .AnyAsync(d => d.OriginId == request.OriginId &&
-//                         d.DestinationId == request.DestinationId);
-
-//     if(exists)
-//         return Results.Conflict();
-
-
-//     Distance distance = new Distance
-//     {
-//         OriginId = request.OriginId,
-//         DestinationId = request.DestinationId,
-//         Kilometers = request.Kilometers
-
-//     };
-//     await db.Distances.AddAsync(distance);
-//     await db.SaveChangesAsync();
-//     return Results.Created();
-
-
-
-// });
-// distance.MapGet("/list", async (AppDbContext db) =>
-// {
-//     var distance = await db.Distances.Select(d => new GetDistanceResponseDto
-//     {
-//         Id = d.Id,
-//         OriginId = d.OriginId,
-//         DestinationId = d.DestinationId,
-//         Kilometers = d.Kilometers
-
-//     }).ToListAsync();
-//     if(distance is null)
-//         return Results.NotFound();
-
-//     return Results.Ok(distance);
-// });
-// //distance.MapPut
-// //distance.MapDelete
-// #endregion
-
-
 
 #region Routes
-routes.MapPost("/create", async (AppDbContext db, CreateRouteRequestDto request) =>
-{
-    // validar request -> return 400
-    if(string.IsNullOrWhiteSpace(request.RouteName) ||
-        request.DistanceId <= 0 )
-        return Results.BadRequest();
 
-
-    // validar conflict -> return 409
-    var exists = await db.Routes.AnyAsync(r => r.RouteName == request.RouteName && r.DistanceId == request.DistanceId);
-    if(exists)
-        return Results.Conflict();
-
-    
-    var query = await db.Distances.Where(d => d.Id == request.DistanceId).Include(p => p.Prices).SingleOrDefaultAsync();
-    if(query is null || query.Prices is null)
-        return Results.NotFound();
-
-    var selectedPrice = query.Prices.OrderByDescending(p => p.Id).FirstOrDefault();
-    if(selectedPrice is null)
-        return Results.NotFound();
-
-    
-    var price = query.Kilometers * selectedPrice.PricePerKm; 
-    Route route = new()
-    {
-        RouteName = request.RouteName,
-        DistanceId = request.DistanceId,
-        Price = price,
-        CreatedAt = DateTime.UtcNow
-    };
-    await db.AddAsync(route);
-    await db.SaveChangesAsync();
-    return Results.Created();
-
-});
-routes.MapGet("/list", async (AppDbContext db) =>
-{
-
-    var routes = await db.Routes.Select(r => new GetRouteResponseDto
-    {
-        RouteName = r.RouteName,
-        DistanceId = r.DistanceId,
-        Kilometers = r.Distance!.Kilometers,
-        
-        
-
-   }).ToListAsync(); 
-    if(routes is null)
-        return Results.NotFound();
-
-    return Results.Ok(routes);
-});
 routes.MapGet("/list/{id:int}", async (int id, AppDbContext db) =>
 {
     var route = await db.Routes.Where(r => r.Id == id).Select(r => new GetRouteResponseDto
@@ -560,6 +444,7 @@ app.MapSwagger();
 
 app.MapAuthEndpoints();
 user.MapUserEndpoints();
+routes.MapRouteEndpoints();
 cities.MapCitiesEnpoints();
 app.MapDistanceEndpoints();
 app.Run();
