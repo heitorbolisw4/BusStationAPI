@@ -9,7 +9,6 @@ using BusStation_API.DTO.Destination;
 using BusStation_API.DTO.Distance;
 using BusStation_API.DTO.Origin;
 using BusStation_API.DTO.Price;
-using BusStation_API.DTO.Route;
 using BusStation_API.DTO.Ticket;
 using BusStation_API.Endpoints;
 using BusStation_API.Entities;
@@ -197,72 +196,8 @@ admin.MapPost("/create", async (AppDbContext db, AdminRequestDto request, IAuthS
 #endregion
 
 
-#region Routes
-
-routes.MapGet("/list/{id:int}", async (int id, AppDbContext db) =>
-{
-    var route = await db.Routes.Where(r => r.Id == id).Select(r => new GetRouteResponseDto
-    {
-        RouteName = r.RouteName,
-        Kilometers = r.Distance!.Kilometers
-    }).ToListAsync();
-
-});
-routes.MapPatch("/update/{id:int}", async (int id, AppDbContext db, UpdateRouteRequestDto request) =>
-{
-    if(request.Price <= 0)
-        return Results.BadRequest();
-
-    // var route = await db.Routes.Where(r => r.Id == id).Include(p => p.Prices).SingleOrDefaultAsync();
-    // if(route is null || route.Distance is null || route.Prices is null)
-    //     return Results.NotFound();
-
-    // var price = route.Distance.Kilometers * route.Prices.PricePerKm;
-
-    // route.Price = price;
-    await db.SaveChangesAsync();
-    return Results.Ok();
-});
-//MapPut
-//MapDelete
-#endregion
-
 #region Boardings
-boardings.MapPost("/create", async (AppDbContext db, CreateBoardingRequestDto request) =>
-{
-    
-   // valido request -> return 400 
-    var today = DateOnly.FromDateTime(DateTime.Now);
-    if(request.RouteId <= 0 || request.Seats <= 0)
-        return Results.BadRequest();
 
-    // eu valido data
-    if(request.BoardingDate < today)
-        return Results.Conflict();
-    
-    // eu valido hora
-    
-
-
-    var route  = await db.Routes.AnyAsync(x => x.Id == request.RouteId);
-    if(!route)
-        return Results.NotFound();
-
-
-    Boarding boarding = new()
-    {
-        RouteId = request.RouteId,
-        Seat = request.Seats,
-        BoardingDate = request.BoardingDate,
-        BoardingTime = request.BoardingTime
-
-    };
-
-    await db.Boardings.AddAsync(boarding);
-    await db.SaveChangesAsync();
-    return Results.Created();
-
-});
 
 // boardings.MapGet("/search", async (AppDbContext db, int originCityId, int destinationCityId, DateOnly date) =>
 // {
@@ -444,7 +379,13 @@ app.MapSwagger();
 
 app.MapAuthEndpoints();
 user.MapUserEndpoints();
+boardings.MapBoardingsEndpoints();
 routes.MapRouteEndpoints();
 cities.MapCitiesEnpoints();
 app.MapDistanceEndpoints();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+
 app.Run();

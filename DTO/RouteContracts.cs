@@ -4,5 +4,6 @@ namespace BusStation_API.DTO
     {
         public record CreateRouteRequest(string RouteName, int DistanceId);
         public record RouteResponse(int Id, string RouteName, int Kilometers);
+        public record UpdateRoutePriceRequest(float Price);
     }
 }

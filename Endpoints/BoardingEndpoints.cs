@@ -1,11 +1,19 @@
 using BusStation_API.Data;
+using BusStation_API.Entities;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using static BusStation_API.DTO.BoardingContracts;
 
 namespace BusStation_API.Endpoints
 {
-    public class BoardingEndpoints
+    public static class BoardingEndpoints
     {
-
+        public static IEndpointRouteBuilder MapBoardingsEndpoints(this IEndpointRouteBuilder app)
+        {
+            var group = app.MapGroup("/");
+            group.MapPost("/create", CreateBoarding);
+            return app;
+        }
 
 
 
@@ -15,10 +23,28 @@ namespace BusStation_API.Endpoints
             if(error is not null)
                 return Results.BadRequest( new { message = error } );
 
-            return Results.Ok();
+            // validar se Route existe
+            var route = await db.Routes.AnyAsync(x => x.Id == request.RouteId);
+            if (!route)
+            {
+                return Results.NotFound();
+            }            
+
+            Boarding boarding = new()
+            {
+                RouteId = request.RouteId,
+                Seat = request.Seats,
+                BoardingDate = request.BoardingDate,
+                BoardingTime = request.BoardingTime
+            };
+            
+
+            await db.AddAsync(boarding);
+            await db.SaveChangesAsync();
+
+            return Results.Created( "/boardings/", boarding);
         }
-
-
+        
 
 
 

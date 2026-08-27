@@ -13,6 +13,8 @@ namespace BusStation_API.Endpoints
             var group = app.MapGroup("/");
             group.MapPost("/create", CreateRoute);
             group.MapGet("/list", RouteList);
+            group.MapGet("/list/{id:int}", GetById);
+            group.MapPatch("/update/{id:int}", UpdatePrice);
             return app;
         }
 
@@ -49,6 +51,7 @@ namespace BusStation_API.Endpoints
                 RouteName = request.RouteName,
                 DistanceId = request.DistanceId,
                 Price = price,
+                IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
             db.Add(route);
@@ -56,6 +59,35 @@ namespace BusStation_API.Endpoints
             return Results.Created();
         }
 
+        private static async Task<IResult> UpdatePrice(int id, UpdateRoutePriceRequest request, AppDbContext db)
+        {
+            if(request.Price <= 0)
+                return Results.BadRequest();
+
+            var route = await db.Routes.Where(r => r.Id == id)
+                .Include(r => r.Distance)
+                    .ThenInclude(d => d!.Prices)
+                .SingleOrDefaultAsync();
+            if(route is null || route.Distance is null || route.Distance.Prices is null)
+                return Results.NotFound();
+
+            var selectedPrice = route.Distance.Prices.OrderByDescending(p => p.Id).FirstOrDefault();
+            if(selectedPrice is null)
+                return Results.NotFound();
+
+            route.Price = route.Distance.Kilometers * selectedPrice.PricePerKm;
+            await db.SaveChangesAsync();
+            return Results.Ok();
+        }
+        private static async Task<IResult> GetById(int Id, AppDbContext db)
+        {
+            var route = await FindOne(Id, db);
+            if(route is null)
+            {
+                return Results.NotFound();
+            }
+            return Results.Ok(ToResponse(route));
+        }
 
         private static async Task<IResult> RouteList(AppDbContext db)
         {
@@ -63,6 +95,10 @@ namespace BusStation_API.Endpoints
 
             return Results.Ok( response );
             
+        }
+        private static async Task<Route?> FindOne(int id, AppDbContext db)
+        {
+            return await db.Routes.Include(x => x.Distance).Where(x => x.Id == id).SingleOrDefaultAsync();
         }
         private static RouteResponse ToResponse(Route route)
         {
