@@ -8,8 +8,6 @@ using BusStation_API.DTO.Boarding;
 using BusStation_API.DTO.Destination;
 using BusStation_API.DTO.Distance;
 using BusStation_API.DTO.Origin;
-using BusStation_API.DTO.Price;
-using BusStation_API.DTO.Ticket;
 using BusStation_API.Endpoints;
 using BusStation_API.Entities;
 using BusStation_API.Interface;
@@ -152,7 +150,7 @@ if (app.Environment.IsDevelopment())
 #region Groups
 var user = app.MapGroup("/user").RequireAuthorization("UserPolicy").WithTags("Users");
 var admin = app.MapGroup("/admin").WithTags("Admins");
-var cities =  app.MapGroup("/cities").RequireAuthorization("AdminPolicy").WithTags("Cities");
+var cities =  app.MapGroup("/cities");//RequireAuthorization("AdminPolicy").WithTags("Cities");
 var routes = app.MapGroup("/routes");//.RequireAuthorization("AdminPolicy").WithTags("Routes");
 var prices = app.MapGroup("/prices").RequireAuthorization("AdminPolicy").WithTags("Prices");
 var origins = app.MapGroup("/origins").RequireAuthorization("AdminPolicy").WithTags("Origins");
@@ -252,128 +250,6 @@ admin.MapPost("/create", async (AppDbContext db, AdminRequestDto request, IAuthS
 
 #endregion
 
-#region Prices
-prices.MapPost("/create", async (AppDbContext db, CreatePriceRequestDto request) =>
-{
-
-    if(request.DistanceId <= 0 || request.PricePerKm <= 0)
-        return Results.BadRequest();
-
-
-    var distance = await db.Distances.AnyAsync(r => r.Id == request.DistanceId);
-    if(!distance)
-        return Results.NotFound();
-
-
-    Price price = new()
-    {
-      DistanceId = request.DistanceId,  
-      PricePerKm = request.PricePerKm
-    };
-
-    await db.AddAsync(price);
-    await db.SaveChangesAsync();
-    return Results.Created();
-
-
-
-});
-prices.MapPatch("/update/{id:int}", async (int id, AppDbContext db, UpdatePriceRequestDto request) =>
-{
-    if(request.NewPrice <= 0 || request.DistanceId <= 0)
-        return Results.BadRequest();
-
-    var price = await db.Prices.FirstOrDefaultAsync(x => x.Id == id && x.DistanceId == request.DistanceId);
-    if(price is null)
-        return Results.NotFound();
-
-    price.PricePerKm = request.NewPrice;
-
-    var route = await db.Routes.Where(x => x.DistanceId == request.DistanceId).Include(y => y.Distance).SingleOrDefaultAsync();
-    if(route is null || route.Distance is null)
-        return Results.NotFound();
-    
-    if(route.Distance.Id != request.DistanceId)
-        return Results.NotFound();
-
-    
-    var newPrice = price.PricePerKm * route.Distance.Kilometers;
-    route.Price = newPrice;
-
-    await db.SaveChangesAsync();
-    return Results.Created();
-    
-});
-prices.MapGet("/list", async (AppDbContext db) =>
-{
-    var prices = await db.Prices.Select( x => new ListPricesRequestDto
-    {
-        PricePerKm = x.PricePerKm,
-        DistanceId = x.DistanceId
-
-    }).ToListAsync();
-    if(prices is null)
-        return Results.NotFound();
-
-
-    return Results.Ok(prices);
-});
-//prices.MapDelete
-#endregion
-
-#region Tickets
-tickets.MapPost("/create", async (AppDbContext db, CreateTicketRequestDto request, ClaimsPrincipal user) =>
-{
-    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
-    if(string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        return Results.Unauthorized();
-
-    var profile = await db.Users.SingleAsync( u => u.Id == userId);
-    if(profile is null)
-        return Results.NotFound();
-    
-    if(request.RouteId <= 0 || request.BoardingId <= 0)
-        return Results.BadRequest(); 
-
-    
-    
-    
-    var now = DateTime.UtcNow;
-    var today = DateOnly.FromDateTime(now);
-    var currentTime = TimeOnly.FromDateTime(now);
-
-    // eu localizo a route e boarding
-    var boarding = await db.Boardings.Where(x => x.Id == request.BoardingId)
-    .Include(x => x.Routes).Where(x => x.RouteId == request.RouteId).FirstOrDefaultAsync();
-
-    if(boarding is null || boarding.Routes is null)
-        return Results.NotFound();
-
-    
-    if(boarding.Seat <= 0)
-        return Results.BadRequest("Dont have seats");
-
-
-    // eu monto o ticket
-    Ticket ticket = new()
-    {
-        RouteId = request.RouteId,        
-        FarePaid = boarding.Routes.Price,
-        PurchasedOn = DateTime.UtcNow,
-        BoardingDate = boarding.BoardingDate,
-        UserId = userId
-    };
-    boarding.Seat -= 1;
-    await db.AddAsync(ticket);
-    await db.SaveChangesAsync();
-    return Results.Created();
-
-});
-//tickets.MapPut
-//tickets.MapGet
-//tickets.MapDelete
-#endregion
-
 app.MapSwagger();
 
 
@@ -383,6 +259,8 @@ boardings.MapBoardingsEndpoints();
 routes.MapRouteEndpoints();
 cities.MapCitiesEnpoints();
 app.MapDistanceEndpoints();
+prices.MapPriceEndpoints();
+tickets.MapTicketEndpoints();
 
 app.UseAuthentication();
 app.UseAuthorization();

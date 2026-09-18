@@ -9,7 +9,6 @@ namespace BusStation_API.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public List<Boarding>? Boardings { get; set; }
-        public List<Ticket>? Tickets { get; set; }
         public Distance? Distance { get; set;}
         public bool IsActive { get; set; }
         

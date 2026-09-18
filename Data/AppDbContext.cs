@@ -42,7 +42,7 @@ namespace BusStation_API.Data
             modelBuilder.Entity<Ticket>(entity =>
             {
                entity.HasKey(t => t.Id);
-               entity.HasOne(t => t.Routes).WithMany(b => b.Tickets).HasForeignKey(b => b.RouteId);
+               entity.HasOne(t => t.Boarding).WithMany(b => b.Tickets).HasForeignKey(t => t.BoardingId);
             });
             modelBuilder.Entity<Distance>(entity =>
             {

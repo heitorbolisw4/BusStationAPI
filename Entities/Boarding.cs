@@ -8,6 +8,7 @@ namespace BusStation_API.Entities
         public DateOnly BoardingDate { get; set; }
         public TimeOnly BoardingTime { get; set; }
         public Route? Routes { get; set; }
+        public List<Ticket>? Tickets { get; set; }
 
     }
 }

@@ -101,12 +101,12 @@ Prioridade (MoSCoW): **M**ust · **S**hould · **C**ould · **W**on't (agora)
 ### 5.4 Passagens (Tickets)
 | ID | Requisito | Prioridade | Status |
 |---|---|---|---|
-| RF-26 | Passageiro autenticado deve poder comprar passagem(ns) para um embarque | **M** | ⬜ **bloqueado por D-02** |
-| RF-27 | Sistema deve verificar vagas disponíveis antes de confirmar a compra | M | ⬜ |
-| RF-28 | Sistema deve debitar as vagas do embarque após compra | M | ⬜ |
-| RF-29 | Sistema deve registrar o valor pago (`FarePaid`) no momento da compra | M | ⬜ |
-| RF-30 | Passageiro deve poder listar suas próprias passagens compradas | M | ⬜ |
-| RF-31 | Passageiro deve poder ver detalhe de uma passagem | S | ⬜ |
+| RF-26 | Passageiro autenticado deve poder comprar passagem(ns) para um embarque | **M** | ✅ |
+| RF-27 | Sistema deve verificar vagas disponíveis antes de confirmar a compra | M | ✅ |
+| RF-28 | Sistema deve debitar as vagas do embarque após compra | M | ✅ |
+| RF-29 | Sistema deve registrar o valor pago (`FarePaid`) no momento da compra | M | ✅ |
+| RF-30 | Passageiro deve poder listar suas próprias passagens compradas | M | ✅ |
+| RF-31 | Passageiro deve poder ver detalhe de uma passagem | S | ✅ |
 
 ---
 
@@ -147,8 +147,8 @@ Estas são as perguntas que, respondidas, eliminam a sensação de "não ter rum
 - **D-01 — Existe papel de Admin?**
   Hoje não há distinção de papel/role. Decidir: (a) criar `Role` no `User` e proteger os endpoints de cadastro de malha, ou (b) aceitar que por ora é um sistema "de balcão" sem admin separado (estudo). Isso define RNF-01.
 
-- **D-02 — Passagem é vendida contra Rota ou contra Embarque?**
-  `Ticket.RouteId` existe, mas `Boarding` é quem tem data/hora/vagas. Uma rota pode ter vários embarques (viagens em dias diferentes). Comprar "da rota" não diz *quando* o passageiro viaja. **Recomendação:** `Ticket` deveria referenciar `BoardingId`, não `RouteId`, e o débito de vagas (RF-27/28) deve ocorrer no `Boarding`, não na `Route` (que nem tem mais campo de vagas). Esta é provavelmente a decisão mais importante pendente — destrava RF-26 a RF-29.
+- **D-02 — Passagem é vendida contra Rota ou contra Embarque? — ✅ Resolvido em 18/09/2026**
+  Decisão: `Ticket` passou a referenciar `BoardingId` (não mais `RouteId`). O débito de vagas (RF-27/28) ocorre em `Boarding.Seat` na criação do ticket. `RouteId`/`RouteName` continuam expostos na resposta via navegação `Ticket.Boarding.Routes`, só não são mais a chave de venda. Migration `TicketReferencesBoarding` feita, ainda não aplicada ao banco.
 
 - **D-03 — Preço da rota é congelado ou dinâmico?**
   Ao criar a rota, o preço é calculado uma vez e salvo. Se o preço/km mudar depois, a rota antiga mantém o valor antigo. É intencional (preço histórico) ou deveria recalcular a cada consulta/venda?
