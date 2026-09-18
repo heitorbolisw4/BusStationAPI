@@ -1,6 +1,8 @@
 # BusStation API — Documento de Requisitos
 
-> Documento produzido no papel de "time de produto", a partir do estado real do código em 26/07/2026 (entidades, endpoints e migrations existentes). Objetivo: dar um norte para o que já existe, travar o escopo do MVP e listar as decisões que só o dono do produto (você) pode tomar.
+> Este é o PRD: visão, personas, escopo do MVP, requisitos e decisões de produto. Para dívida técnica e arquitetura, ver `ARCHITECTURE.md`. Para a fila de trabalho priorizada (MoSCoW, Kanban), ver `BACKLOG.md`. Para o histórico de entregas, ver `CHANGELOG.md`.
+>
+> Documento produzido no papel de "time de produto", a partir do estado real do código em 26/07/2026 (entidades, endpoints e migrations existentes), atualizado em 18/09/2026.
 
 ---
 
@@ -176,20 +178,16 @@ Regra prática: toda ideia nova que surgir enquanto você codifica, escreva aqui
 
 ---
 
-## 10. Achados Técnicos no Código Atual (observação, não é requisito)
+## 10. Dívida Técnica e Arquitetura
 
-Notas de leitura do código — não corrigidas aqui de propósito, para você mesmo decidir e corrigir como parte do aprendizado:
-
-1. `cities.MapPost("/create")`: a checagem de duplicidade compara `c.State == request.Acronym` — parece trocado com `c.Acronym == request.Acronym`.
-2. `routes.MapGet("/list/{id:int}")`: monta a query mas nunca retorna `Results.Ok(...)` — o método não compila um retorno em todos os caminhos ou fica implícito.
-3. `routes.MapPatch("/update/{id:int}")`: a lógica de recálculo de preço está toda comentada; hoje o endpoint só faz `SaveChangesAsync` sem alterar nada.
-4. `Entities/Route.cs` tem `TicketId` (int solto, sem uso aparente — sobra de uma modelagem anterior?) e `IsActive` (não é lida/escrita em nenhum endpoint).
-5. O bloco `tickets.MapPost("/create", ...)` está inteiro comentado — referencia `route.Seat`, campo que não existe mais em `Route` (foi para `Boarding`). Confirma o D-02 acima: essa parte do código ficou "presa" exatamente na decisão de domínio não resolvida.
+Movido para `ARCHITECTURE.md` §4 (revisado e verificado contra o código atual em 18/09/2026 — a versão antiga desta seção, de 26/07/2026, tinha achados já corrigidos pelo refactor).
 
 ---
 
-## 11. Próximo Passo Sugerido
+## 11. Processo e Próximo Passo
 
-1. Resolver D-01 a D-05 nesta seção (pode ser só marcando a resposta ao lado de cada uma, direto neste arquivo).
-2. Fechar RF-26 a RF-31 (módulo de Tickets) — é o único fluxo core que falta para o MVP fechar ponta a ponta.
-3. Só depois disso, considerar qualquer item da seção 9.
+**Metodologia:** Kanban — fluxo contínuo de trabalho, sem sprint fixo, priorizado em MoSCoW. A fila de trabalho ativa vive em `BACKLOG.md`, não aqui.
+
+1. Resolver D-01, D-03, D-04, D-05 (D-02 já resolvida — ver acima). Pode ser só marcando a resposta ao lado de cada uma, direto neste arquivo.
+2. Puxar o próximo item do `BACKLOG.md` pela prioridade (Must antes de Should).
+3. Considerar itens da seção 9 (fora de escopo) só depois que a fila de Must/Should estiver vazia.
