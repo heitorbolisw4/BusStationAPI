@@ -21,6 +21,7 @@ namespace BusStation_API.Data
         public DbSet<City> City {get;set;}
         public DbSet<Price> Prices { get; set; }
         public DbSet<Boarding> Boardings { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -38,6 +39,13 @@ namespace BusStation_API.Data
                 entity.Property(u => u.Password).IsRequired().HasMaxLength(255);
 
                 entity.HasMany(u => u.Tickets).WithOne(t => t.User).HasForeignKey(t => t.UserId);
+            });
+            modelBuilder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasKey(t => t.Id);
+                entity.HasIndex(t => t.TokenHash).IsUnique();
+                entity.Property(t => t.TokenHash).IsRequired().HasMaxLength(64);
+                entity.HasOne(t => t.User).WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<Ticket>(entity =>
             {

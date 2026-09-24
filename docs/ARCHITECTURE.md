@@ -8,7 +8,7 @@
 
 - **Runtime:** .NET 10, ASP.NET Core Minimal API
 - **Banco:** PostgreSQL via EF Core (Npgsql), migrations versionadas em `Migrations/`
-- **Autenticação:** JWT com dois schemes separados (`UserScheme`, `AdminScheme`) e duas policies. `UserPolicy` só aceita o `UserScheme`. `AdminPolicy` autentica pelos dois schemes e exige a claim `"adm"`: sem token → 401, token de cliente → 403, token de admin → ok.
+- **Autenticação:** cliente usa access token JWT curto + refresh token opaco rotativo (ver §7); admin só access token. JWT com dois schemes separados (`UserScheme`, `AdminScheme`) e duas policies. `UserPolicy` só aceita o `UserScheme`. `AdminPolicy` autentica pelos dois schemes e exige a claim `"adm"`: sem token → 401, token de cliente → 403, token de admin → ok.
 - **Documentação de API:** Swagger/OpenAPI, ativo em todo ambiente exceto `Production` (ver §6)
 - **Frontend:** React + Vite, consumindo a API via `src/api/*.js` (repo separado, `BusStationFrontEnd`)
 
@@ -74,3 +74,12 @@ Escopo aprovado em `../docs/deploy/escopo-deploy.md` (repo raiz).
 - **Proxy/porta:** `UseForwardedHeaders` (For + Proto) com as listas de proxies conhecidos limpas, porque o IP do proxy do provedor não é fixo. A porta vem de `PORT` quando existe (Render), senão de `ASPNETCORE_HTTP_PORTS`.
 - **Primeiro admin:** `AdminBootstrapper` roda no startup (`IHostedService`) e cria um admin a partir de `BOOTSTRAP_ADMIN_EMAIL`/`BOOTSTRAP_ADMIN_PASSWORD` só se não existir nenhum. Se o banco ainda não tiver as tabelas, registra o erro no log e a API sobe mesmo assim. O seed não roda dentro da migration para que a senha não vá parar no repositório.
 - **Migrations em deploy:** `dotnet ef migrations bundle` gera o `efbundle` (fora do git), rodado contra a connection string **direta** do Neon antes do deploy. Nunca `Database.Migrate()` no startup. As ferramentas do EF usam `DesignTimeDbContextFactory` (user-secrets/variável de ambiente, ou `--connection`) em vez de subir o `Program.cs`, então o bundle não depende das chaves JWT nem do CORS.
+
+## 7. Refresh token (decisões, 2026-09-24)
+
+- **Opaco, não JWT:** precisa ser revogável (logout, reuso), e um JWT só "morre" quando expira. É um valor aleatório de 512 bits, e o banco guarda apenas o SHA-256. Não é BCrypt porque não há dicionário para atacar num valor aleatório, e precisamos buscar pelo hash.
+- **Rotação com detecção de reuso:** cada `/refresh` revoga o token usado e emite outro. Se um token revogado reaparece, todas as sessões do usuário são revogadas. A revogação usa `ExecuteUpdate ... WHERE RevokedAt IS NULL`, então de dois refresh concorrentes só um vence, e o outro conta como reuso.
+- **No corpo JSON, não em cookie HttpOnly:** front (`vercel.app`) e API (`railway.app`) estão em sites diferentes, e os navegadores bloqueiam cada vez mais cookie de terceiro (`SameSite=None`). O custo é o token ficar acessível a JavaScript (risco de XSS), o que é aceito para staging de estudo. Com domínio próprio para front e API, dá para migrar para cookie.
+- **Só cliente:** admin mantém token curto sem refresh. Sessão longa de admin é risco maior e não há tela de admin ainda.
+- **Dívida:** tokens expirados/revogados acumulam na tabela. Precisa de limpeza periódica (`DEBT-028`).
+

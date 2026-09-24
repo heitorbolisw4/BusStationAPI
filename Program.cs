@@ -39,7 +39,9 @@ var adminJwt = builder.Configuration.GetSection("JwtSettings:Admin").Get<JwtAdmi
 var userJwt = builder.Configuration.GetSection("JwtSettings:User").Get<JwtUserOptions>();
 
 builder.Services.AddSingleton<TokenService>();
-builder.Services.AddSingleton<ITokenService<User>, UserTokenService>();
+builder.Services.AddSingleton<UserTokenService>();
+builder.Services.AddSingleton<ITokenService<User>>(sp => sp.GetRequiredService<UserTokenService>());
+builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddSingleton<ITokenService<Admin>, AdminTokenService>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
 builder.Services.AddSingleton<AdminBootstrapper>();

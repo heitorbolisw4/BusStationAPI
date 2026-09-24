@@ -100,6 +100,15 @@ Host=<host>;Database=neondb;Username=neondb_owner;Password=<senha>;SSL Mode=Requ
 - `GET /health/ready`: 200 quando o Postgres responde, 503 quando não. Use para checagem manual e no smoke test.
 - `GET /swagger`: UI do Swagger (fora de `Production`).
 
+## Autenticação de cliente (access + refresh token)
+
+- `POST /login` → `200 { token, refreshToken, expiresIn }`. O `token` é o JWT de acesso (padrão 15 min, `JwtSettings__User__ExpirationTimeInMinutes`), e `expiresIn` diz em quantos segundos ele expira. O `refreshToken` é opaco e vale 7 dias (`JwtSettings__User__RefreshExpirationTimeInMinutes`).
+- `POST /refresh { refreshToken }` → `200` com um par **novo**. O refresh token usado deixa de valer (rotação). Token inválido, expirado ou já usado → `401`, e o cliente deve mandar para o login.
+- `POST /logout { refreshToken }` → sempre `204`.
+- **Reuso = sessão comprometida:** se um refresh token já usado for apresentado de novo, **todas** as sessões do usuário são revogadas. Consequência para o front: dois `/refresh` em paralelo com o mesmo token derrubam a sessão, então o cliente precisa fazer o refresh **uma vez só** (single-flight) e reaproveitar o resultado nas requests que estavam esperando.
+- O banco guarda só o hash SHA-256 do refresh token (tabela `RefreshTokens`).
+- Admin continua só com access token (sem refresh).
+
 ## Deploy no Railway (API)
 
 Staging: `https://busstationapi-production.up.railway.app`. Serviço com build pelo **Dockerfile**, a partir deste repo, com deploy a cada push em `main`.

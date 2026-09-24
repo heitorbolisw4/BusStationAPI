@@ -7,6 +7,8 @@ namespace BusStation_API.E2E.Infrastructure
 
     public record TokenResponse(string Token);
 
+    public record TokenPairDto(string Token, string RefreshToken, int ExpiresIn);
+
     public record CityDto(int Id, string CityName, string State, string Acronym);
 
     public record DistanceDto(int Id, int OriginCityId, int DestinationCityId, int Kilometers);

@@ -99,13 +99,25 @@
 ### [FEAT-025] [front] Telas de cadastro/login, compra e "minhas passagens"
 **Prioridade:** Must | **Estimativa:** L
 **Origem:** fechamento do staging v1 (`../docs/deploy/escopo-deploy.md` §7): o DoD 2 não fecha porque o front só tem a busca
-**Contexto:** a API já suporta o fluxo inteiro (`/register`, `/login`, `/tickets/create`, `/tickets/list`) e foi validada no staging. Falta a UI. Token de usuário expira em 5 min (`JwtSettings:User:ExpirationTimeInMinutes`), então a UI precisa tratar 401 levando de volta ao login.
+**Contexto:** a API já suporta o fluxo inteiro (`/register`, `/login`, `/tickets/create`, `/tickets/list`) e foi validada no staging. Falta a UI. A API agora tem refresh token (`FEAT-027`, ver README "Autenticação de cliente"): a UI renova o access token via `POST /refresh` com single-flight, e só manda ao login quando o refresh falha.
 **Critério de aceite:**
 - [ ] Cadastro e login, com token guardado e enviado como `Bearer`
 - [ ] Botão de comprar numa saída da busca → `POST /tickets/create`, com feedback de sucesso e erro (sem vaga, não logado)
 - [ ] Tela "minhas passagens" (`GET /tickets/list`)
-- [ ] 401 em qualquer chamada autenticada → volta ao login com mensagem
+- [ ] 401 em chamada autenticada → tenta `POST /refresh` uma vez (single-flight) e repete a request; se o refresh falhar → login com mensagem
+- [ ] Logout chama `POST /logout`
 - [ ] Testes Vitest cobrindo os fluxos felizes e o 401
+**Status:** To Do
+
+---
+
+### [DEBT-028] Limpeza de refresh tokens expirados/revogados
+**Prioridade:** Could | **Estimativa:** S
+**Origem:** `ARCHITECTURE.md` §7 (refresh token, `FEAT-027`)
+**Contexto:** cada login e cada refresh gravam uma linha em `RefreshTokens`, e nada apaga as antigas.
+**Critério de aceite:**
+- [ ] Rotina (hosted service periódico ou job) apaga linhas expiradas ou revogadas há mais de N dias
+- [ ] Teste cobre que tokens ativos não são apagados
 **Status:** To Do
 
 ---

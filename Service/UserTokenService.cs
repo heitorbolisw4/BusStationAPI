@@ -17,6 +17,11 @@ namespace BusStation_API.Service
             _options = options.Value;
         }
 
+        public const int DefaultExpirationMinutes = 15;
+
+        public TimeSpan AccessTokenLifetime => TimeSpan.FromMinutes(
+            _options.ExpirationTimeInMinutes > 0 ? _options.ExpirationTimeInMinutes : DefaultExpirationMinutes);
+
         public string GenerateToken(User user)
         {
             var claims = new List<Claim>()
@@ -29,7 +34,7 @@ namespace BusStation_API.Service
              _options.Issuer,
               _options.Audience,
                _options.SecretKey,
-                TimeSpan.FromMinutes(5));
+                AccessTokenLifetime);
         }
     }
 

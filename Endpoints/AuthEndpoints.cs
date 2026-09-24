@@ -2,6 +2,7 @@ using BusStation_API.Data;
 using BusStation_API.DTO;
 using BusStation_API.Entities;
 using BusStation_API.Interface;
+using BusStation_API.Service;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusStation_API.Endpoints
@@ -12,6 +13,8 @@ namespace BusStation_API.Endpoints
         {
             app.MapPost("/register", Register);
             app.MapPost("/login", Login);
+            app.MapPost("/refresh", Refresh);
+            app.MapPost("/logout", Logout);
 
             // Só admin cria admin. O primeiro vem do seed (AdminBootstrapper, BOOTSTRAP_ADMIN_*).
             app.MapPost("/admin/create", AdminRegister).RequireAuthorization("AdminPolicy");
@@ -44,15 +47,35 @@ namespace BusStation_API.Endpoints
 
         }
 
-        private static async Task<IResult> Login(LoginRequest request, AppDbContext db, IAuthService service, ITokenService<User> tokenService)
+        private static async Task<IResult> Login(LoginRequest request, AppDbContext db, IAuthService service, UserTokenService tokenService, RefreshTokenService refreshTokens)
         {
             var user = await db.Users.SingleOrDefaultAsync(u => u.Email == request.Email);
             if(user is null || !service.PasswordVerify(request.Password, user.Password))
                 return Results.Unauthorized();
 
-            var token = tokenService.GenerateToken(user);
-            return Results.Ok(new {token});
+            var refreshToken = await refreshTokens.IssueAsync(user.Id);
+            return Results.Ok(TokenPair(user, tokenService, refreshToken));
         }
+
+        private static async Task<IResult> Refresh(RefreshRequest request, UserTokenService tokenService, RefreshTokenService refreshTokens)
+        {
+            var rotated = await refreshTokens.RotateAsync(request.RefreshToken);
+            if(rotated is null)
+                return Results.Unauthorized();
+
+            var (user, refreshToken) = rotated.Value;
+            return Results.Ok(TokenPair(user, tokenService, refreshToken));
+        }
+
+        // Sempre 204: logout é idempotente e não revela se o token existia.
+        private static async Task<IResult> Logout(RefreshRequest request, RefreshTokenService refreshTokens)
+        {
+            await refreshTokens.RevokeAsync(request.RefreshToken);
+            return Results.NoContent();
+        }
+
+        private static TokenPairResponse TokenPair(User user, UserTokenService tokenService, string refreshToken) =>
+            new(tokenService.GenerateToken(user), refreshToken, (int)tokenService.AccessTokenLifetime.TotalSeconds);
 
 
         // admin Endpoints
