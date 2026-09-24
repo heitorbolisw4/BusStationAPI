@@ -30,7 +30,7 @@ dotnet test
 
 ## Docker
 
-A imagem é a mesma que o Render usa: `Dockerfile` multi-stage (`sdk:10.0` compila → `aspnet:10.0` roda, como usuário não-root `app`), escutando em `8080` (ou na `PORT` do provedor).
+A imagem é a mesma que o Railway usa: `Dockerfile` multi-stage (`sdk:10.0` compila → `aspnet:10.0` roda, como usuário não-root `app`), escutando em `8080` (ou na `PORT` do provedor).
 
 Ensaio local com Postgres (`docker-compose.yml`):
 
@@ -55,7 +55,7 @@ dotnet ef migrations bundle -o efbundle --force            # Linux/macOS
 ./efbundle.exe --connection "Host=<host-direto>;Database=neondb;Username=neondb_owner;Password=<senha>;SSL Mode=Require;Channel Binding=Require"
 ```
 
-- **Quando:** antes do deploy no Render de qualquer versão que traga migration nova. Na v1 é manual, rodado da máquina do dev (o plano free do Render não tem Pre-Deploy Command). Na fase 2 (`CHORE-020`) vira um job do GitHub Actions.
+- **Quando:** antes do deploy de qualquer versão que traga migration nova. Na v1 é manual, rodado da máquina do dev. O próximo passo é rodar no Pre-Deploy Command do Railway (`CHORE-026`).
 - **Idempotente:** rodar de novo só imprime `No migrations were applied. The database is already up to date.`
 - **Senha:** `neon cs production --project-id green-heart-40389256` devolve a URI com a senha. Converta para o formato Npgsql (seção "Connection string do Neon") e não cole a senha em arquivo versionado nem em issue.
 - **Teste antes em branch descartável do Neon** (recomendado quando a migration é nova):
@@ -78,7 +78,7 @@ Fora de Development não existe user-secrets: tudo vem de variável de ambiente.
 | `JwtSettings__Admin__SecretKey` | sim | ≥ 32 bytes, diferente da de User |
 | `Cors__AllowedOrigins` | sim fora de Development | `https://seu-front.vercel.app`. Várias origens: separe por vírgula. Em Development, sem valor, libera `http://localhost:5173` |
 | `ASPNETCORE_ENVIRONMENT` | recomendado | `Staging` no staging (Swagger ligado). `Production` desliga o Swagger |
-| `PORT` | não | porta HTTP. O Render injeta sozinho (padrão 10000). Sem ela, vale `ASPNETCORE_HTTP_PORTS` (8080 na imagem) |
+| `PORT` | não | porta HTTP. O Railway injeta sozinho. Sem ela, vale `ASPNETCORE_HTTP_PORTS` (8080 na imagem) |
 | `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` | não | cria o **primeiro** admin no startup, só se as duas estiverem definidas e não existir nenhum admin. Depois do primeiro boot, pode apagar as duas |
 
 `Issuer`/`Audience` do JWT não são segredo e têm valor padrão no `appsettings.json`.
@@ -91,21 +91,21 @@ O painel/CLI do Neon entrega uma URI (`postgresql://user:senha@host/neondb?sslmo
 Host=<host>;Database=neondb;Username=neondb_owner;Password=<senha>;SSL Mode=Require;Channel Binding=Require
 ```
 
-- **Runtime da API (Render):** host **pooled** (`...-pooler...neon.tech`).
+- **Runtime da API (Railway):** host **pooled** (`...-pooler...neon.tech`).
 - **Migrations (efbundle):** host **direto** (sem `-pooler`).
 
 ### Endpoints de operação
 
-- `GET /health`: liveness, 200 `Healthy` se o processo está de pé. **Não consulta o banco**, porque é o `healthCheckPath` do Render: se batesse no Postgres a cada checagem, o Neon nunca suspenderia e gastaria as horas de compute do plano free.
+- `GET /health`: liveness, 200 `Healthy` se o processo está de pé. **Não consulta o banco**, porque é o health check do serviço no Railway: se batesse no Postgres a cada checagem, o Neon nunca suspenderia e gastaria as horas de compute do plano free.
 - `GET /health/ready`: 200 quando o Postgres responde, 503 quando não. Use para checagem manual e no smoke test.
 - `GET /swagger`: UI do Swagger (fora de `Production`).
 
-## Deploy no Render (API)
+## Deploy no Railway (API)
 
-Web Service com runtime **Docker**, a partir deste repo, região **Virginia (US East)**.
+Staging: `https://busstationapi-production.up.railway.app`. Serviço com build pelo **Dockerfile**, a partir deste repo, com deploy a cada push em `main`.
 
-- **Health Check Path:** `/health`
-- **Environment:** as variáveis da tabela acima (`ASPNETCORE_ENVIRONMENT=Staging`, connection string **pooled**).
-- A porta vem de `PORT`, que o Render define sozinho; não é preciso configurar nada.
-- O TLS termina no proxy do Render; a API lê `X-Forwarded-For`/`X-Forwarded-Proto` (`UseForwardedHeaders`).
+- **Health check:** `/health`
+- **Variables:** as da tabela acima (`ASPNETCORE_ENVIRONMENT=Staging`, connection string **pooled** em formato Npgsql, **sem aspas** em volta do valor).
+- A porta vem de `PORT`, que o Railway define sozinho; não é preciso configurar nada.
+- O TLS termina no proxy do Railway; a API lê `X-Forwarded-For`/`X-Forwarded-Proto` (`UseForwardedHeaders`).
 - **Antes** de cada deploy que traz migration nova: rodar o `efbundle` (seção "Migrations em deploy").

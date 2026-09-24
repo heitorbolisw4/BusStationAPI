@@ -96,15 +96,29 @@
 
 ---
 
-### [CHORE-024] Primeiro deploy da API no Render
-**Prioridade:** Must | **Estimativa:** S
-**Origem:** `../docs/deploy/escopo-deploy.md` (repo raiz), §6
-**Contexto:** a API já está pronta para o deploy (Dockerfile, config de produção, `efbundle`). Falta subir no Render contra o Neon.
+### [FEAT-025] [front] Telas de cadastro/login, compra e "minhas passagens"
+**Prioridade:** Must | **Estimativa:** L
+**Origem:** fechamento do staging v1 (`../docs/deploy/escopo-deploy.md` §7): o DoD 2 não fecha porque o front só tem a busca
+**Contexto:** a API já suporta o fluxo inteiro (`/register`, `/login`, `/tickets/create`, `/tickets/list`) e foi validada no staging. Falta a UI. Token de usuário expira em 5 min (`JwtSettings:User:ExpirationTimeInMinutes`), então a UI precisa tratar 401 levando de volta ao login.
 **Critério de aceite:**
-- [ ] `efbundle` rodado contra a connection string **direta** da branch `production` do Neon
-- [ ] Web Service no Render (Docker, Virginia, Health Check Path `/health`) com as variáveis do README (`ASPNETCORE_ENVIRONMENT=Staging`, connection string **pooled** no formato Npgsql, chaves JWT com 32+ bytes, `BOOTSTRAP_ADMIN_*`, `Cors__AllowedOrigins`)
-- [ ] `GET /health/ready` → 200 na URL pública e login de admin funcionando
-- [ ] URL pública registrada no escopo do deploy e repassada para a trilha do front (`CHORE-019`)
+- [ ] Cadastro e login, com token guardado e enviado como `Bearer`
+- [ ] Botão de comprar numa saída da busca → `POST /tickets/create`, com feedback de sucesso e erro (sem vaga, não logado)
+- [ ] Tela "minhas passagens" (`GET /tickets/list`)
+- [ ] 401 em qualquer chamada autenticada → volta ao login com mensagem
+- [ ] Testes Vitest cobrindo os fluxos felizes e o 401
+**Status:** To Do
+
+---
+
+### [CHORE-026] Migrations no Pre-Deploy Command do Railway
+**Prioridade:** Should | **Estimativa:** S
+**Origem:** troca de Render para Railway (`../docs/deploy/escopo-deploy.md` §6)
+**Contexto:** hoje o `efbundle` roda à mão da máquina do dev. O Railway tem Pre-Deploy Command, e isso tira o passo manual.
+**Critério de aceite:**
+- [ ] A imagem inclui o `efbundle` (gerado num stage do Dockerfile)
+- [ ] Pre-Deploy Command configurado para rodar o bundle com a connection string **direta** (variável separada da pooled)
+- [ ] Deploy sem migration nova continua passando (idempotência)
+- [ ] README atualizado
 **Status:** To Do
 
 ---
@@ -113,13 +127,13 @@
 **Prioridade:** Must | **Estimativa:** S
 **Origem:** `../docs/deploy/escopo-deploy.md`, §4
 **Critério de aceite:** ver o escopo do deploy (script contra `BASE_URL` cobrindo `/health/ready` → compra → `/tickets/list`, com timeout de 90s na 1ª request por causa do cold start).
-**Status:** Blocked (depende de CHORE-024 e CHORE-019)
+**Status:** Blocked (depende de FEAT-025 e de embarque cadastrado pelo admin)
 
 ---
 
 ### [CHORE-020] CD automático para staging
 **Prioridade:** Could | **Estimativa:** S
 **Origem:** `../docs/deploy/escopo-deploy.md`, §4 (fase 2)
-**Critério de aceite:** merge em `main` dispara `efbundle` (GitHub Actions + secret com a connection string direta) → deploy hook do Render → smoke test.
+**Critério de aceite:** merge em `main` → migrations (CHORE-026) → deploy → smoke test (CHORE-021) automático; smoke vermelho deixa o pipeline vermelho.
 **Status:** Blocked (depende de CHORE-021)
 

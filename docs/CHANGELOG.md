@@ -4,6 +4,7 @@
 
 ## 2026-09-24
 
+- **[DONE] CHORE-024: staging v1 no ar.** API no Railway (`busstationapi-production.up.railway.app`) + Neon (migrations via `efbundle`) + front no Vercel (`bus-station-tau.vercel.app`). Smoke via curl ok (health, register, login, search, tickets, 401/403 de admin). O fluxo de compra pela UI fica para o `FEAT-025`.
 - **[DONE] API pronta para deploy em staging** (merge de `chore/deploy-staging`, `10eba9a`). Fecha:
   - `BUG-013`: login de admin com senha certa; `/admin/create` só para admin; primeiro admin por seed via `BOOTSTRAP_ADMIN_*`.
   - `FEAT-003`: `AdminPolicy` em `/cities`, `/routes` e `/boardings`, com leitura pública só em `GET /cities/list` e `GET /boardings/search`. Token de cliente em rota de admin agora recebe **403** (antes 401), inclusive em `/prices` e `/distances`.
