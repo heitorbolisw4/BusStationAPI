@@ -171,3 +171,6 @@ app.UseAuthorization();
 
 
 app.Run();
+
+// Expõe o Program gerado pelos top-level statements para o WebApplicationFactory dos testes E2E.
+public partial class Program { }

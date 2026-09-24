@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# O padrão *.e2e do template do VS casa com o nome do projeto de testes
+!tests/BusStation_API.E2E/

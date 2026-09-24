@@ -7,6 +7,14 @@
     <UserSecretsId>778d68dc-4439-475c-bfb8-e6b444d5e0ed</UserSecretsId>
   </PropertyGroup>
 
+  <!-- O projeto de testes mora dentro desta pasta; sem isto o glob padrão do SDK
+       compilaria os .cs dele junto com a API. -->
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+    <Content Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.14" />

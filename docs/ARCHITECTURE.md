@@ -45,7 +45,9 @@ Itens abaixo têm ticket correspondente em `BACKLOG.md` — este documento expli
 1. **Checagem de cidade duplicada não cobre `Acronym`** (`CityEndpoints.Create`) — só compara `CityName`. `Acronym` tem índice único no banco (`AppDbContext`), então duas cidades com o mesmo `Acronym` não caem no `Results.Conflict()` esperado: estouram `DbUpdateException` não tratada (500 cru). → `BUG-001`
 2. **RNF-01 ainda aberto (D-01 não resolvida):** os grupos `/cities`, `/routes` e `/boardings` não exigem nenhuma autenticação — nem login, nem `AdminPolicy`. A infraestrutura de Admin já existe e funciona (`AdminTokenService` emite a claim `"adm"`, `AdminPolicy` já é usada em `/prices`, `/distances`), só falta aplicar aos grupos certos. → `FEAT-003`
 3. **Valores monetários em `float`** (`Price.PricePerKm`, `Route.Price`, `Ticket.FarePaid`) — RNF-03. `decimal` é o tipo correto para dinheiro (evita erro de arredondamento binário). → `DEBT-002`
-4. **Login de admin com verificação de senha invertida + `POST /admin/create` anônimo** (`AuthEndpoints`). → `BUG-009`
+4. **Login de admin com verificação de senha invertida + `POST /admin/create` anônimo** (`AuthEndpoints`). → `BUG-013`
+8. **Grupo `/tickets` sem policy** — `RequireAuthorization()` cai na policy default, que desafia o scheme `"Bearer"` registrado em `AddAuthentication(...)` mas nunca configurado (os schemes reais são `UserScheme`/`AdminScheme`). Resultado: 500 em toda request. → `BUG-014`
+9. **`PriceEndpoints.UpdatePrice` assume 1 rota por distância** (`SingleOrDefaultAsync`). → `BUG-015`
 5. **Sem padronização de erro** (RNF-04) — cada endpoint devolve `BadRequest(new { message })` manualmente; sem `ProblemDetails` nem middleware central. → `DEBT-005`
 6. **Sem paginação em `/list`** (RNF-06) — aceitável com o volume atual de seed data, não escala. → `DEBT-006`
 7. **Convenção de rota inconsistente** (RNF-05) — mistura `/create`, `/list/{id}` com verbos HTTP que já expressam a ação (ex.: `CityEndpoints` usa `POST /create` em vez de `POST /`). → `DEBT-008`
@@ -57,4 +59,5 @@ Itens abaixo têm ticket correspondente em `BACKLOG.md` — este documento expli
 - **CI:** GitHub Actions — `dotnet build` + `dotnet test` em todo PR.
 - **CD:** deploy automático em `staging` a cada merge em `main`; `prod` por deploy manual/tag.
 - **Hospedagem candidata:** Railway ou Fly.io para API + Postgres (Dockerfile); Vercel ou Netlify para o frontend.
-- **Testes de integração:** xUnit + `WebApplicationFactory`; Postgres real via Testcontainers (requer Docker Desktop rodando localmente — hoje instalado mas com o daemon parado).
+- **Testes E2E (existem desde 2026-09-24):** `tests/BusStation_API.E2E` — xUnit + `WebApplicationFactory<Program>`, API inteira em memória falando HTTP contra um Postgres real. O banco é `<DefaultConnection>_e2e`, apagado e recriado pelas migrations a cada execução (o de dev nunca é tocado). Connection string: `BUSSTATION_E2E_CONNECTION` ou, na falta dela, a dos user-secrets da API. Rodar: `dotnet test` na raiz do repo. Testes que expõem bug aberto ficam com `Skip = "BUG-xxx: ..."` — corrigir o bug = remover o `Skip` e ver verde.
+- **Testcontainers** continua sendo o próximo passo (dispensa Postgres instalado), mas depende do Docker Desktop rodando.
