@@ -4,6 +4,13 @@
 
 ## 2026-09-24
 
+- **[DONE] API pronta para deploy em staging** (merge de `chore/deploy-staging`, `10eba9a`). Fecha:
+  - `BUG-013`: login de admin com senha certa; `/admin/create` só para admin; primeiro admin por seed via `BOOTSTRAP_ADMIN_*`.
+  - `FEAT-003`: `AdminPolicy` em `/cities`, `/routes` e `/boardings`, com leitura pública só em `GET /cities/list` e `GET /boardings/search`. Token de cliente em rota de admin agora recebe **403** (antes 401), inclusive em `/prices` e `/distances`.
+  - `CHORE-022`: CORS por config, fail-fast de segredos, `/health` (liveness) + `/health/ready` (Postgres), Swagger desligado só em Production, forwarded headers, porta via `PORT`.
+  - `CHORE-012`: Dockerfile multi-stage não-root + docker-compose local.
+  - `CHORE-023`: migrations por `efbundle`, fora do startup.
+  - `CHORE-011`: CI no GitHub Actions (build + E2E contra Postgres + `docker build`).
 - **[DONE] BUG-014: compra de passagem voltou a funcionar** — grupo `/tickets` passa a exigir `UserPolicy` (antes caía na policy default, que desafiava o scheme `Bearer` nunca registrado → 500 em toda request). Testes E2E de passagem/jornada do cliente reativados. `a9c29c6`
 - **[DONE] Suíte de testes E2E da API** (`tests/BusStation_API.E2E`, fecha `CHORE-010`) — 44 cenários por jornada (cliente, operação/admin, busca, passagens, conta, cidades) contra Postgres real. Achou 2 bugs novos: `BUG-014` (compra de passagem sempre 500) e `BUG-015` (reajuste de preço 500 com 2+ rotas); os testes deles, de `BUG-001` e de `BUG-013` ficam com `Skip` até a correção.
 - **[DONE] Terminada a extração de `Program.cs` e removidos os DTOs antigos** (`DTO/Admin`, `Boarding`, `Destination`, `Distance`, `Origin`, `Route`) — `POST /admin/create` foi para `AuthEndpoints`; `GET /boardings/search` (estava comentado, o front depende dele) voltou em `BoardingEndpoints`; `/distances` voltou a exigir `AdminPolicy` (estava anônimo desde a extração); grupos mortos removidos (fecha `CHORE-004`). `6227a5f`

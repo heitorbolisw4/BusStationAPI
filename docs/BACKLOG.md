@@ -19,17 +19,6 @@
 
 ---
 
-### [BUG-013] Login de admin aceita senha errada e rejeita a certa
-**Prioridade:** Must | **Estimativa:** XS
-**Origem:** encontrado durante o refactor `6227a5f`
-**Contexto:** `AuthEndpoints.AdminLogin` checa `service.PasswordVerify(...)` sem o `!` (o `Login` de usuário tem). Resultado: token de admin sai pra quem erra a senha, e quem acerta leva 401. Além disso, `POST /admin/create` é anônimo: qualquer um cria um admin.
-**Critério de aceite:**
-- [ ] `POST /admin/login` com senha correta → `200` + token; com senha errada → `401`
-- [ ] Remover o `Skip` de `AuthAndProfileTests.Admin_login_accepts_the_right_password_and_rejects_a_wrong_one` e ele passar
-- [ ] Decidir com a liderança quem pode chamar `POST /admin/create` (seed + `AdminPolicy`?) e registrar a decisão
-**Status:** To Do
-
----
 
 ### [BUG-015] Reajuste de preço/km quebra quando a distância tem mais de uma rota
 **Prioridade:** Must | **Estimativa:** S
@@ -54,18 +43,6 @@
 
 ---
 
-### [FEAT-003] Papel de Admin protegendo `/cities`, `/routes` e `/boardings`
-**Prioridade:** Must | **Estimativa:** S
-**Origem:** RNF-01 / Decisão D-01 (`REQUISITOS.md`)
-**Contexto:** `AdminPolicy` e a claim `"adm"` já existem e funcionam (usadas em `/prices`, `/distances`). Só falta aplicar `.RequireAuthorization("AdminPolicy")` aos grupos `cities`, `routes` e `boardings` em `Program.cs`, que hoje são públicos.
-**Critério de aceite:**
-- [ ] Request anônima a `POST /cities/create`, `POST /routes/create` e `POST /boardings/create` retorna `401`
-- [ ] Request com token de User (não Admin) retorna `403`
-- [ ] Request com token de Admin continua funcionando
-- [ ] `GET`s de leitura pública (busca de rotas/embarques) continuam acessíveis sem login — confirmar quais realmente devem ficar públicos antes de proteger o grupo inteiro
-**Status:** To Do
-
----
 
 ### [DEBT-005] Padronizar respostas de erro com `ProblemDetails`
 **Prioridade:** Should | **Estimativa:** M
@@ -119,22 +96,30 @@
 
 ---
 
-### [CHORE-011] Pipeline de CI (GitHub Actions)
-**Prioridade:** Should | **Estimativa:** S
-**Origem:** Objetivo declarado do projeto (praticar CI/CD) — `ARCHITECTURE.md` §5
-**Contexto:** A suíte E2E já existe (`tests/BusStation_API.E2E`) e precisa de um Postgres de verdade — no workflow, subir um `services: postgres` e passar `BUSSTATION_E2E_CONNECTION`.
+### [CHORE-024] Primeiro deploy da API no Render
+**Prioridade:** Must | **Estimativa:** S
+**Origem:** `../docs/deploy/escopo-deploy.md` (repo raiz), §6
+**Contexto:** a API já está pronta para o deploy (Dockerfile, config de produção, `efbundle`). Falta subir no Render contra o Neon.
 **Critério de aceite:**
-- [ ] Workflow roda `dotnet build` + `dotnet test` em todo PR
-- [ ] Badge de status no README
+- [ ] `efbundle` rodado contra a connection string **direta** da branch `production` do Neon
+- [ ] Web Service no Render (Docker, Virginia, Health Check Path `/health`) com as variáveis do README (`ASPNETCORE_ENVIRONMENT=Staging`, connection string **pooled** no formato Npgsql, chaves JWT com 32+ bytes, `BOOTSTRAP_ADMIN_*`, `Cors__AllowedOrigins`)
+- [ ] `GET /health/ready` → 200 na URL pública e login de admin funcionando
+- [ ] URL pública registrada no escopo do deploy e repassada para a trilha do front (`CHORE-019`)
 **Status:** To Do
 
 ---
 
-### [CHORE-012] Containerizar API e publicar em staging
-**Prioridade:** Should | **Estimativa:** M
-**Origem:** Objetivo declarado do projeto (praticar deploy) — `ARCHITECTURE.md` §5
-**Critério de aceite:**
-- [ ] `Dockerfile` funcional para a API
-- [ ] Deploy manual bem-sucedido em Railway ou Fly.io (a decidir) com Postgres gerenciado
-- [ ] Variáveis de ambiente/segredos fora do código
-**Status:** Blocked (depende de decisão de hospedagem)
+### [CHORE-021] Smoke test pós-deploy
+**Prioridade:** Must | **Estimativa:** S
+**Origem:** `../docs/deploy/escopo-deploy.md`, §4
+**Critério de aceite:** ver o escopo do deploy (script contra `BASE_URL` cobrindo `/health/ready` → compra → `/tickets/list`, com timeout de 90s na 1ª request por causa do cold start).
+**Status:** Blocked (depende de CHORE-024 e CHORE-019)
+
+---
+
+### [CHORE-020] CD automático para staging
+**Prioridade:** Could | **Estimativa:** S
+**Origem:** `../docs/deploy/escopo-deploy.md`, §4 (fase 2)
+**Critério de aceite:** merge em `main` dispara `efbundle` (GitHub Actions + secret com a connection string direta) → deploy hook do Render → smoke test.
+**Status:** Blocked (depende de CHORE-021)
+
