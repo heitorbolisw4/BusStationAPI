@@ -11,6 +11,13 @@ RUN dotnet restore BusStation_API.csproj
 COPY . .
 RUN dotnet publish BusStation_API.csproj -c Release -o /app/publish --no-restore /p:UseAppHost=false
 
+# efbundle: executável com as migrations, rodado pelo Pre-Deploy Command do Railway
+# (./efbundle) antes de cada deploy. Versão do dotnet-ef fixada em dotnet-tools.json.
+RUN dotnet tool restore \
+ && dotnet ef migrations bundle --project BusStation_API.csproj --configuration Release \
+      --target-runtime linux-x64 --output /app/publish/efbundle --force \
+ && chmod +x /app/publish/efbundle
+
 # ---- runtime: só o ASP.NET Core runtime, sem SDK ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app

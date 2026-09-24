@@ -44,7 +44,24 @@ O Postgres do compose fica em `localhost:5433`. As migrations **não** rodam no 
 
 ## Migrations em deploy (efbundle)
 
-A API **não** aplica migration no boot (`Database.Migrate()` no startup é proibido: corrida entre instâncias e deploy misturado com boot). As migrations, incluindo o seed `HasData`, são um passo explícito de release, feito com um executável gerado pelo EF:
+A API **não** aplica migration no boot (`Database.Migrate()` no startup é proibido: corrida entre instâncias e deploy misturado com boot). As migrations, incluindo o seed `HasData`, são um passo explícito de release, feito com um executável gerado pelo EF (`efbundle`).
+
+### No Railway (automático)
+
+A imagem Docker já traz o `efbundle` em `/app/efbundle`, gerado no build com o `dotnet-ef` fixado em `dotnet-tools.json`. No serviço do Railway:
+
+- **Settings → Deploy → Pre-deploy Command:** `./efbundle`
+- **Variables:** `MIGRATIONS_CONNECTION` = connection string **direta** do Neon (host **sem** `-pooler`), formato Npgsql, sem aspas.
+
+O Railway roda o bundle antes de trocar a versão no ar. Se a migration falhar, o deploy é abortado e a versão anterior continua servindo. Sem `MIGRATIONS_CONNECTION`, o bundle cai na `ConnectionStrings__DefaultConnection`, que é a pooled: funciona, mas migration pelo pooler não é o recomendado.
+
+**Ordem de precedência da connection string no bundle:** `--connection` → `MIGRATIONS_CONNECTION` → `ConnectionStrings__DefaultConnection` (ambiente ou user-secrets).
+
+**Migration que quebra o código no ar** (renomear ou remover coluna, por exemplo) precisa ser feita em duas etapas, *expand/contract*: primeiro uma versão que aceita os dois formatos, depois a limpeza. O pre-deploy roda a migration **antes** da versão nova subir, então durante alguns segundos o código antigo roda contra o schema novo.
+
+### Manual (máquina do dev)
+
+Continua valendo para testar migration nova numa branch descartável do Neon, ou se o pre-deploy estiver desligado:
 
 ```bash
 # 1. gerar o bundle (fica fora do git: efbundle/efbundle.exe estão no .gitignore)
@@ -55,7 +72,6 @@ dotnet ef migrations bundle -o efbundle --force            # Linux/macOS
 ./efbundle.exe --connection "Host=<host-direto>;Database=neondb;Username=neondb_owner;Password=<senha>;SSL Mode=Require;Channel Binding=Require"
 ```
 
-- **Quando:** antes do deploy de qualquer versão que traga migration nova. Na v1 é manual, rodado da máquina do dev. O próximo passo é rodar no Pre-Deploy Command do Railway (`CHORE-026`).
 - **Idempotente:** rodar de novo só imprime `No migrations were applied. The database is already up to date.`
 - **Senha:** `neon cs production --project-id green-heart-40389256` devolve a URI com a senha. Converta para o formato Npgsql (seção "Connection string do Neon") e não cole a senha em arquivo versionado nem em issue.
 - **Teste antes em branch descartável do Neon** (recomendado quando a migration é nova):

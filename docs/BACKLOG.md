@@ -134,11 +134,12 @@
 **Origem:** troca de Render para Railway (`../docs/deploy/escopo-deploy.md` §6)
 **Contexto:** hoje o `efbundle` roda à mão da máquina do dev. O Railway tem Pre-Deploy Command, e isso tira o passo manual.
 **Critério de aceite:**
-- [ ] A imagem inclui o `efbundle` (gerado num stage do Dockerfile)
-- [ ] Pre-Deploy Command configurado para rodar o bundle com a connection string **direta** (variável separada da pooled)
-- [ ] Deploy sem migration nova continua passando (idempotência)
-- [ ] README atualizado
-**Status:** To Do
+- [x] A imagem inclui o `efbundle` (gerado no stage de build do Dockerfile, `dotnet-ef` fixado em `dotnet-tools.json`)
+- [x] O bundle lê a connection string **direta** de `MIGRATIONS_CONNECTION` (validado contra uma branch descartável do Neon)
+- [ ] Railway: Pre-deploy Command `./efbundle` + variável `MIGRATIONS_CONNECTION` configurados (dev)
+- [ ] Deploy sem migration nova continua passando (idempotência), conferido nos Deploy Logs
+- [x] README atualizado
+**Status:** In Progress. O código está pronto e falta a configuração no painel do Railway.
 
 ---
 
