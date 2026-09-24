@@ -4,6 +4,7 @@
 
 ## 2026-09-24
 
+- **[DONE] BUG-014: compra de passagem voltou a funcionar** — grupo `/tickets` passa a exigir `UserPolicy` (antes caía na policy default, que desafiava o scheme `Bearer` nunca registrado → 500 em toda request). Testes E2E de passagem/jornada do cliente reativados. `a9c29c6`
 - **[DONE] Suíte de testes E2E da API** (`tests/BusStation_API.E2E`, fecha `CHORE-010`) — 44 cenários por jornada (cliente, operação/admin, busca, passagens, conta, cidades) contra Postgres real. Achou 2 bugs novos: `BUG-014` (compra de passagem sempre 500) e `BUG-015` (reajuste de preço 500 com 2+ rotas); os testes deles, de `BUG-001` e de `BUG-013` ficam com `Skip` até a correção.
 - **[DONE] Terminada a extração de `Program.cs` e removidos os DTOs antigos** (`DTO/Admin`, `Boarding`, `Destination`, `Distance`, `Origin`, `Route`) — `POST /admin/create` foi para `AuthEndpoints`; `GET /boardings/search` (estava comentado, o front depende dele) voltou em `BoardingEndpoints`; `/distances` voltou a exigir `AdminPolicy` (estava anônimo desde a extração); grupos mortos removidos (fecha `CHORE-004`). `6227a5f`
 

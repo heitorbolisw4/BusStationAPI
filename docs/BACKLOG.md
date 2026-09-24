@@ -31,17 +31,6 @@
 
 ---
 
-### [BUG-014] Compra de passagem sempre devolve 500
-**Prioridade:** Must | **Estimativa:** XS
-**Origem:** suíte E2E (`CHORE-010`)
-**Contexto:** Cliente logado clica em comprar e recebe erro 500 — `POST /tickets/create`, `GET /tickets/list` e `GET /tickets/list/{id}` falham para qualquer token, e até request anônima leva 500 em vez de 401. O loop central do MVP (busca → compra → minhas passagens) está quebrado.
-**Critério de aceite:**
-- [ ] Remover o `Skip` de todos os testes de `CustomerJourneyTests` e `TicketTests` e todos passarem
-- [ ] Request anônima em `/tickets/*` devolve `401`
-**Status:** To Do
-
----
-
 ### [BUG-015] Reajuste de preço/km quebra quando a distância tem mais de uma rota
 **Prioridade:** Must | **Estimativa:** S
 **Origem:** suíte E2E (`CHORE-010`)

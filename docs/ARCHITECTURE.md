@@ -46,8 +46,7 @@ Itens abaixo têm ticket correspondente em `BACKLOG.md` — este documento expli
 2. **RNF-01 ainda aberto (D-01 não resolvida):** os grupos `/cities`, `/routes` e `/boardings` não exigem nenhuma autenticação — nem login, nem `AdminPolicy`. A infraestrutura de Admin já existe e funciona (`AdminTokenService` emite a claim `"adm"`, `AdminPolicy` já é usada em `/prices`, `/distances`), só falta aplicar aos grupos certos. → `FEAT-003`
 3. **Valores monetários em `float`** (`Price.PricePerKm`, `Route.Price`, `Ticket.FarePaid`) — RNF-03. `decimal` é o tipo correto para dinheiro (evita erro de arredondamento binário). → `DEBT-002`
 4. **Login de admin com verificação de senha invertida + `POST /admin/create` anônimo** (`AuthEndpoints`). → `BUG-013`
-8. **Grupo `/tickets` sem policy** — `RequireAuthorization()` cai na policy default, que desafia o scheme `"Bearer"` registrado em `AddAuthentication(...)` mas nunca configurado (os schemes reais são `UserScheme`/`AdminScheme`). Resultado: 500 em toda request. → `BUG-014`
-9. **`PriceEndpoints.UpdatePrice` assume 1 rota por distância** (`SingleOrDefaultAsync`). → `BUG-015`
+8. **`PriceEndpoints.UpdatePrice` assume 1 rota por distância** (`SingleOrDefaultAsync`). → `BUG-015`
 5. **Sem padronização de erro** (RNF-04) — cada endpoint devolve `BadRequest(new { message })` manualmente; sem `ProblemDetails` nem middleware central. → `DEBT-005`
 6. **Sem paginação em `/list`** (RNF-06) — aceitável com o volume atual de seed data, não escala. → `DEBT-006`
 7. **Convenção de rota inconsistente** (RNF-05) — mistura `/create`, `/list/{id}` com verbos HTTP que já expressam a ação (ex.: `CityEndpoints` usa `POST /create` em vez de `POST /`). → `DEBT-008`
