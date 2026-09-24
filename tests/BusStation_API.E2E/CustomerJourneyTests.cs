@@ -12,9 +12,6 @@ namespace BusStation_API.E2E
     [Collection(E2ECollection.Name)]
     public class CustomerJourneyTests
     {
-        private const string TicketAuthBug =
-            "BUG-014: grupo /tickets usa RequireAuthorization() sem policy e o scheme default \"Bearer\" não existe — toda request autenticada devolve 500";
-
         private readonly TestApi _api;
 
         public CustomerJourneyTests(BusStationApiFactory factory)
@@ -22,7 +19,7 @@ namespace BusStation_API.E2E
             _api = new TestApi(factory);
         }
 
-        [Fact(Skip = TicketAuthBug)]
+        [Fact]
         public async Task Customer_can_find_a_departure_buy_a_ticket_and_see_it_in_their_tickets()
         {
             // Operação cadastra uma saída Indianópolis -> Uberlândia
@@ -67,7 +64,7 @@ namespace BusStation_API.E2E
             Assert.Equal(ticket with { PurchasedOn = detail!.PurchasedOn }, detail);
         }
 
-        [Fact(Skip = TicketAuthBug)]
+        [Fact]
         public async Task Last_seat_can_be_sold_once_and_then_the_departure_disappears_from_search()
         {
             var date = TestApi.UniqueFutureDate();

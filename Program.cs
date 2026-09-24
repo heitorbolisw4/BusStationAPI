@@ -147,7 +147,7 @@ var user = app.MapGroup("/user").RequireAuthorization("UserPolicy").WithTags("Us
 var cities =  app.MapGroup("/cities");//RequireAuthorization("AdminPolicy").WithTags("Cities");
 var routes = app.MapGroup("/routes");//.RequireAuthorization("AdminPolicy").WithTags("Routes");
 var prices = app.MapGroup("/prices").RequireAuthorization("AdminPolicy").WithTags("Prices");
-var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
+var tickets = app.MapGroup("/tickets").RequireAuthorization("UserPolicy").WithTags("Tickets");
 var distances =  app.MapGroup("/distances").RequireAuthorization("AdminPolicy").WithTags("Distances");
 var boardings = app.MapGroup("/boardings").WithTags("Boardings");
 #endregion

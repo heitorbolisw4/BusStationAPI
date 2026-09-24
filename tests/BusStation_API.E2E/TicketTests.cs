@@ -8,9 +8,6 @@ namespace BusStation_API.E2E
     [Collection(E2ECollection.Name)]
     public class TicketTests
     {
-        private const string TicketAuthBug =
-            "BUG-014: grupo /tickets usa RequireAuthorization() sem policy e o scheme default \"Bearer\" não existe — toda request autenticada devolve 500";
-
         private readonly TestApi _api;
 
         public TicketTests(BusStationApiFactory factory)
@@ -18,7 +15,7 @@ namespace BusStation_API.E2E
             _api = new TestApi(factory);
         }
 
-        [Theory(Skip = TicketAuthBug)]
+        [Theory]
         [InlineData("POST", "/tickets/create")]
         [InlineData("GET", "/tickets/list")]
         [InlineData("GET", "/tickets/list/1")]
@@ -33,7 +30,7 @@ namespace BusStation_API.E2E
             await Expect.Status(response, HttpStatusCode.Unauthorized);
         }
 
-        [Fact(Skip = TicketAuthBug)]
+        [Fact]
         public async Task Buying_for_an_unknown_boarding_returns_404_and_invalid_id_returns_400()
         {
             var customer = await _api.NewCustomer();
@@ -45,7 +42,7 @@ namespace BusStation_API.E2E
             await Expect.Status(invalid, HttpStatusCode.BadRequest);
         }
 
-        [Fact(Skip = TicketAuthBug)]
+        [Fact]
         public async Task Customer_cannot_see_another_customers_ticket()
         {
             var route = await _api.CreateRoute(Seed.IndianopolisToUberlandia);
@@ -62,7 +59,7 @@ namespace BusStation_API.E2E
             Assert.Empty((await stranger.GetFromJsonAsync<List<TicketDto>>("/tickets/list"))!);
         }
 
-        [Fact(Skip = TicketAuthBug)]
+        [Fact]
         public async Task Fare_paid_is_frozen_at_purchase_time()
         {
             var admin = await _api.NewAdmin();
@@ -88,7 +85,7 @@ namespace BusStation_API.E2E
             Assert.Equal(ticket.FarePaid, stored!.FarePaid);
         }
 
-        [Fact(Skip = TicketAuthBug)]
+        [Fact]
         public async Task Admin_token_cannot_buy_tickets()
         {
             var admin = await _api.NewAdmin();
