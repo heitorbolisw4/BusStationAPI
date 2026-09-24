@@ -33,6 +33,31 @@ curl http://localhost:8080/health   # 200 Healthy
 
 O Postgres do compose fica em `localhost:5433`. As migrations **não** rodam no boot: aplique com o `efbundle` (próxima seção) usando `Host=localhost;Port=5433;Database=busstation;Username=postgres;Password=<POSTGRES_PASSWORD>`. Se quiser o primeiro admin, preencha `BOOTSTRAP_ADMIN_*` no `.env` e rode `docker compose restart api` depois da migration.
 
+## Migrations em deploy (efbundle)
+
+A API **não** aplica migration no boot (`Database.Migrate()` no startup é proibido: corrida entre instâncias e deploy misturado com boot). As migrations, incluindo o seed `HasData`, são um passo explícito de release, feito com um executável gerado pelo EF:
+
+```bash
+# 1. gerar o bundle (fica fora do git: efbundle/efbundle.exe estão no .gitignore)
+dotnet ef migrations bundle -o efbundle.exe --force        # Windows
+dotnet ef migrations bundle -o efbundle --force            # Linux/macOS
+
+# 2. aplicar com a connection string DIRETA do Neon (host SEM -pooler), formato Npgsql
+./efbundle.exe --connection "Host=<host-direto>;Database=neondb;Username=neondb_owner;Password=<senha>;SSL Mode=Require;Channel Binding=Require"
+```
+
+- **Quando:** antes do deploy no Render de qualquer versão que traga migration nova. Na v1 é manual, rodado da máquina do dev (o plano free do Render não tem Pre-Deploy Command). Na fase 2 (`CHORE-020`) vira um job do GitHub Actions.
+- **Idempotente:** rodar de novo só imprime `No migrations were applied. The database is already up to date.`
+- **Senha:** `neon cs production --project-id green-heart-40389256` devolve a URI com a senha. Converta para o formato Npgsql (seção "Connection string do Neon") e não cole a senha em arquivo versionado nem em issue.
+- **Teste antes em branch descartável do Neon** (recomendado quando a migration é nova):
+  ```bash
+  neon branches create --project-id green-heart-40389256 --name deploy-test --parent production
+  neon cs deploy-test --project-id green-heart-40389256      # rode o efbundle contra esta
+  neon branches delete deploy-test --project-id green-heart-40389256
+  ```
+- **Primeiro admin:** não está na migration. Vem do seed de startup (`BOOTSTRAP_ADMIN_EMAIL`/`BOOTSTRAP_ADMIN_PASSWORD`), que só cria se não existir nenhum admin. Se a API subir antes da migration, o seed falha só no log e é tentado de novo no próximo boot.
+- As ferramentas do EF usam `Data/DesignTimeDbContextFactory.cs`, e não o `Program.cs`, para o fail-fast de runtime (JWT, CORS) não bloquear o bundle.
+
 ## Configuração (variáveis de ambiente)
 
 Fora de Development não existe user-secrets: tudo vem de variável de ambiente. Se faltar algo obrigatório, **a API não sobe** e o log diz exatamente o que falta (fail-fast).
