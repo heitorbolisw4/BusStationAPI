@@ -113,7 +113,10 @@ builder.Services.AddAuthorization(options =>
     });
     options.AddPolicy("AdminPolicy", policy =>
     {
+        // Os dois schemes: token de User autentica pelo UserScheme, mas não tem a claim
+        // "adm" -> 403 (autenticado, sem permissão). Sem token nenhum -> 401.
         policy.AuthenticationSchemes.Add("AdminScheme");
+        policy.AuthenticationSchemes.Add("UserScheme");
         policy.RequireAuthenticatedUser();
         policy.RequireClaim("adm");
     });
@@ -146,12 +149,14 @@ if (app.Environment.IsDevelopment())
 
 #region Groups
 var user = app.MapGroup("/user").RequireAuthorization("UserPolicy").WithTags("Users");
-var cities =  app.MapGroup("/cities");//RequireAuthorization("AdminPolicy").WithTags("Cities");
-var routes = app.MapGroup("/routes");//.RequireAuthorization("AdminPolicy").WithTags("Routes");
+// Grupos de catálogo fecham tudo por padrão (AdminPolicy); leitura pública é
+// liberada endpoint a endpoint com AllowAnonymous() (GET /cities/list, GET /boardings/search).
+var cities =  app.MapGroup("/cities").RequireAuthorization("AdminPolicy").WithTags("Cities");
+var routes = app.MapGroup("/routes").RequireAuthorization("AdminPolicy").WithTags("Routes");
 var prices = app.MapGroup("/prices").RequireAuthorization("AdminPolicy").WithTags("Prices");
 var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
 var distances =  app.MapGroup("/distances").RequireAuthorization("AdminPolicy").WithTags("Distances");
-var boardings = app.MapGroup("/boardings").WithTags("Boardings");
+var boardings = app.MapGroup("/boardings").RequireAuthorization("AdminPolicy").WithTags("Boardings");
 #endregion
 
 

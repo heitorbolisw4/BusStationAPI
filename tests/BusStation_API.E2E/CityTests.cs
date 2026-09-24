@@ -27,7 +27,7 @@ namespace BusStation_API.E2E
         public async Task City_lifecycle_create_update_delete()
         {
             var city = await _api.CreateCity();
-            var client = _api.Anonymous();
+            var client = await _api.Admin();
             var renamed = TestApi.Unique("Renamed ");
 
             var update = await client.PutAsJsonAsync($"/cities/update/{city.Id}",
@@ -47,7 +47,7 @@ namespace BusStation_API.E2E
         public async Task Create_rejects_blank_fields_and_duplicate_name()
         {
             var city = await _api.CreateCity();
-            var client = _api.Anonymous();
+            var client = await _api.Admin();
 
             var blank = await client.PostAsJsonAsync("/cities/create", new { cityName = "", state = "MG", acronym = "XX" });
             var duplicate = await client.PostAsJsonAsync("/cities/create",
@@ -60,7 +60,7 @@ namespace BusStation_API.E2E
         [Fact]
         public async Task City_used_by_a_distance_cannot_be_deleted()
         {
-            var response = await _api.Anonymous().DeleteAsync($"/cities/delete/{Seed.Uberlandia}");
+            var response = await (await _api.Admin()).DeleteAsync($"/cities/delete/{Seed.Uberlandia}");
 
             await Expect.Status(response, HttpStatusCode.Conflict);
         }
@@ -70,7 +70,7 @@ namespace BusStation_API.E2E
         {
             var city = await _api.CreateCity();
 
-            var response = await _api.Anonymous().PostAsJsonAsync("/cities/create",
+            var response = await (await _api.Admin()).PostAsJsonAsync("/cities/create",
                 new { cityName = TestApi.Unique("Other "), state = "MG", acronym = city.Acronym });
 
             await Expect.Status(response, HttpStatusCode.Conflict);

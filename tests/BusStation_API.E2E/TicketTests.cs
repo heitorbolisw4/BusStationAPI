@@ -81,7 +81,7 @@ namespace BusStation_API.E2E
                 await admin.PostAsJsonAsync("/prices/create", new { distanceId = leg.Distance.Id, pricePerKm = 2.0f }),
                 HttpStatusCode.Created);
             await Expect.Status(
-                await _api.Anonymous().PatchAsJsonAsync($"/routes/update/{route.Id}", new { price = 1f }),
+                await admin.PatchAsJsonAsync($"/routes/update/{route.Id}", new { price = 1f }),
                 HttpStatusCode.OK);
 
             var stored = await customer.GetFromJsonAsync<TicketDto>($"/tickets/list/{ticket.Id}");

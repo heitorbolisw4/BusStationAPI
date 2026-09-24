@@ -106,6 +106,14 @@ namespace BusStation_API.E2E.Infrastructure
             return (await response.Content.ReadFromJsonAsync<TokenResponse>())!.Token;
         }
 
+        private Task<HttpClient>? _admin;
+
+        /// <summary>
+        /// Admin compartilhado pelos helpers de "arrange" desta instância (uma por teste).
+        /// O catálogo (cidade, rota, embarque) só é escrito por admin (FEAT-003).
+        /// </summary>
+        public Task<HttpClient> Admin() => _admin ??= NewAdmin();
+
         /// <summary>Admin novo, logado pelo POST /admin/login de verdade.</summary>
         public async Task<HttpClient> NewAdmin()
         {
@@ -118,12 +126,11 @@ namespace BusStation_API.E2E.Infrastructure
             var cityName = Unique("City ");
             // Acronym tem índice único e no máximo 5 caracteres
             var acronym = Guid.NewGuid().ToString("N")[..5].ToUpperInvariant();
-            var client = Anonymous();
 
-            var response = await client.PostAsJsonAsync("/cities/create", new { cityName, state = "MG", acronym });
+            var response = await (await Admin()).PostAsJsonAsync("/cities/create", new { cityName, state = "MG", acronym });
             await Expect.Status(response, HttpStatusCode.Created);
 
-            var cities = await client.GetFromJsonAsync<List<CityDto>>("/cities/list");
+            var cities = await Anonymous().GetFromJsonAsync<List<CityDto>>("/cities/list");
             return cities!.Single(c => c.CityName == cityName);
         }
 
@@ -153,7 +160,7 @@ namespace BusStation_API.E2E.Infrastructure
         public async Task<RouteDto> CreateRoute(int distanceId)
         {
             var routeName = Unique("R-");
-            var client = Anonymous();
+            var client = await Admin();
 
             var response = await client.PostAsJsonAsync("/routes/create", new { routeName, distanceId });
             await Expect.Status(response, HttpStatusCode.Created);
@@ -165,7 +172,7 @@ namespace BusStation_API.E2E.Infrastructure
 
         public async Task<BoardingCreatedDto> CreateBoarding(int routeId, DateOnly date, TimeOnly time, int seats = 40)
         {
-            var response = await Anonymous().PostAsJsonAsync("/boardings/create",
+            var response = await (await Admin()).PostAsJsonAsync("/boardings/create",
                 new { routeId, seats, boardingDate = date, boardingTime = time });
             await Expect.Status(response, HttpStatusCode.Created);
             return (await response.Content.ReadFromJsonAsync<BoardingCreatedDto>())!;

@@ -57,7 +57,7 @@ namespace BusStation_API.E2E
         [Fact]
         public async Task Route_creation_validates_name_distance_and_duplicates()
         {
-            var client = _api.Anonymous();
+            var client = await _api.Admin();
             var route = await _api.CreateRoute(Seed.IndianopolisToUberlandia);
 
             var shortName = await client.PostAsJsonAsync("/routes/create", new { routeName = "abc", distanceId = Seed.IndianopolisToUberlandia });
@@ -77,6 +77,15 @@ namespace BusStation_API.E2E
         [InlineData("PUT", "/distances/create")]
         [InlineData("GET", "/prices/list")]
         [InlineData("POST", "/prices/create")]
+        [InlineData("POST", "/admin/create")]
+        [InlineData("POST", "/cities/create")]
+        [InlineData("PUT", "/cities/update/1")]
+        [InlineData("DELETE", "/cities/delete/1")]
+        [InlineData("POST", "/routes/create")]
+        [InlineData("GET", "/routes/list")]
+        [InlineData("GET", "/routes/list/1")]
+        [InlineData("PATCH", "/routes/update/1")]
+        [InlineData("POST", "/boardings/create")]
         public async Task Admin_only_endpoints_reject_anonymous_and_customer_tokens(string method, string path)
         {
             var customer = await _api.NewCustomer();
@@ -85,9 +94,38 @@ namespace BusStation_API.E2E
             var asCustomer = await customer.SendAsync(new HttpRequestMessage(new HttpMethod(method), path));
 
             await Expect.Status(asAnonymous, HttpStatusCode.Unauthorized);
-            // Token de cliente é assinado com outra chave/issuer: para o AdminScheme ele é
-            // um token inválido, não um usuário autenticado sem permissão — por isso 401.
-            await Expect.Status(asCustomer, HttpStatusCode.Unauthorized);
+            // AdminPolicy autentica pelos dois schemes: o cliente é reconhecido (token
+            // válido do UserScheme), mas não tem a claim "adm". Autenticado sem permissão: 403.
+            await Expect.Status(asCustomer, HttpStatusCode.Forbidden);
+        }
+
+        [Fact]
+        public async Task Admin_token_opens_the_catalog_write_endpoints()
+        {
+            var admin = await _api.Admin();
+            var city = await _api.CreateCity();
+
+            var route = await _api.CreateRoute(Seed.IndianopolisToUberlandia);
+            await Expect.Status(await admin.GetAsync($"/routes/list/{route.Id}"), HttpStatusCode.OK);
+            await Expect.Status(await admin.PatchAsJsonAsync($"/routes/update/{route.Id}", new { price = 1f }), HttpStatusCode.OK);
+            await _api.CreateBoarding(route.Id, TestApi.UniqueFutureDate(), new TimeOnly(12, 0));
+
+            await Expect.Status(
+                await admin.PutAsJsonAsync($"/cities/update/{city.Id}", new { cityName = TestApi.Unique("Adm "), state = "GO", acronym = city.Acronym }),
+                HttpStatusCode.NoContent);
+            await Expect.Status(await admin.DeleteAsync($"/cities/delete/{city.Id}"), HttpStatusCode.NoContent);
+        }
+
+        [Theory]
+        [InlineData("/cities/list")]
+        [InlineData("/boardings/search?originCityId=1&destinationCityId=2&date=2099-01-01")]
+        public async Task Public_catalog_reads_work_without_a_token(string path)
+        {
+            await Expect.Status(await _api.Anonymous().GetAsync(path), HttpStatusCode.OK);
+
+            // e continuam abertos para quem está logado como cliente
+            var customer = await _api.NewCustomer();
+            await Expect.Status(await customer.GetAsync(path), HttpStatusCode.OK);
         }
 
         [Fact]

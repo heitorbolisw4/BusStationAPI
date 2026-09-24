@@ -12,7 +12,8 @@ namespace BusStation_API.Endpoints
         {
             var group = app.MapGroup("/");
             group.MapPost("/create", CreateBoarding);
-            group.MapGet("/search", SearchBoardings);
+            // público: busca de horários é a tela inicial do site, anônima
+            group.MapGet("/search", SearchBoardings).AllowAnonymous();
             return app;
         }
 
