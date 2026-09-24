@@ -4,6 +4,7 @@
 
 ## 2026-09-24
 
+- **[DONE] CHORE-026: migrations automáticas no deploy.** A imagem traz o `efbundle`, e o Railway roda `./efbundle` como Pre-deploy Command, usando `MIGRATIONS_CONNECTION` (host direto do Neon). Primeiro deploy com o pre-deploy ativo: `No migrations were applied`. Migration falhando aborta o deploy e mantém a versão anterior no ar. `ba6a231`
 - **[DONE] BUG-032: nome de rota até 100 caracteres, com 400 acima disso.** Antes, a coluna era `varchar(20)` e a validação não conferia o tamanho: `"Indianopolis - Uberlandia"` dava 500. Decisão da liderança: o limite sobe para 100, o que cabe "Cidade A → Cidade B". Migration `WidenRouteName` só alarga a coluna.
 - **[DONE] Staging v1 fechado: DoD completo.** Fecha `FEAT-025` (front: cadastro/login com refresh, compra e "Minhas passagens") e `CHORE-021` (smoke via API e via UI no staging: busca → compra → minhas passagens, com vaga 40→37). O smoke de UI ainda não está versionado (`CHORE-033`).
 - **[DONE] BUG-030: fim do overbooking na compra.** A vaga passa a ser baixada por `UPDATE ... SET Seat = Seat - 1 WHERE Seat > 0` atômico, na mesma transação do ticket. Antes, 10 compras paralelas num embarque de 2 vagas passavam todas; o teste E2E novo garante exatamente 2.

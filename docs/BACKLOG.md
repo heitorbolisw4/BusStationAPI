@@ -129,20 +129,6 @@
 
 ---
 
-### [CHORE-026] Migrations no Pre-Deploy Command do Railway
-**Prioridade:** Should | **Estimativa:** S
-**Origem:** troca de Render para Railway (`../docs/deploy/escopo-deploy.md` §6)
-**Contexto:** hoje o `efbundle` roda à mão da máquina do dev. O Railway tem Pre-Deploy Command, e isso tira o passo manual.
-**Critério de aceite:**
-- [x] A imagem inclui o `efbundle` (gerado no stage de build do Dockerfile, `dotnet-ef` fixado em `dotnet-tools.json`)
-- [x] O bundle lê a connection string **direta** de `MIGRATIONS_CONNECTION` (validado contra uma branch descartável do Neon)
-- [ ] Railway: Pre-deploy Command `./efbundle` + variável `MIGRATIONS_CONNECTION` configurados (dev)
-- [ ] Deploy sem migration nova continua passando (idempotência), conferido nos Deploy Logs
-- [x] README atualizado
-**Status:** In Progress. O código está pronto e falta a configuração no painel do Railway.
-
----
-
 ### [CHORE-033] [front] Smoke de UI versionado (Playwright)
 **Prioridade:** Should | **Estimativa:** M
 **Origem:** fechamento do CHORE-021. O E2E de UI que validou o staging roda com scripts CDP fora do repo.
@@ -157,6 +143,6 @@
 ### [CHORE-020] CD automático para staging
 **Prioridade:** Could | **Estimativa:** S
 **Origem:** `../docs/deploy/escopo-deploy.md`, §4 (fase 2)
-**Critério de aceite:** merge em `main` → migrations (CHORE-026) → deploy → smoke de API e de UI (CHORE-033) automáticos; smoke vermelho deixa o pipeline vermelho.
-**Status:** Blocked (depende de CHORE-026 e CHORE-033)
+**Critério de aceite:** merge em `main` → migrations (pre-deploy do Railway, já ativo) → deploy → smoke de API e de UI (CHORE-033) automáticos; smoke vermelho deixa o pipeline vermelho.
+**Status:** Blocked (depende de CHORE-033)
 
