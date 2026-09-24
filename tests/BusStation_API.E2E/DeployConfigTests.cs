@@ -26,9 +26,18 @@ namespace BusStation_API.E2E
         }
 
         [Fact]
-        public async Task Health_returns_200_when_postgres_is_reachable()
+        public async Task Health_liveness_returns_200()
         {
             var response = await _api.Anonymous().GetAsync("/health");
+
+            await Expect.Status(response, HttpStatusCode.OK);
+            Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
+        }
+
+        [Fact]
+        public async Task Health_ready_returns_200_when_postgres_is_reachable()
+        {
+            var response = await _api.Anonymous().GetAsync("/health/ready");
 
             await Expect.Status(response, HttpStatusCode.OK);
             Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());

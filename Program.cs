@@ -11,6 +11,7 @@ using BusStation_API.Jwt;
 using BusStation_API.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -138,7 +139,7 @@ builder.Services.AddOptions<CorsOptions>().Configure<IConfiguration, IHostEnviro
     options.AddPolicy(StartupConfig.CorsPolicyName, policy =>
         policy.WithOrigins(StartupConfig.AllowedOrigins(config, env)).AllowAnyHeader().AllowAnyMethod()));
 
-builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("postgres");
+builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("postgres", tags: ["ready"]);
 
 // O Render termina o TLS no proxy e repassa HTTP com X-Forwarded-*. O IP do proxy não é
 // fixo, então as listas de proxies conhecidos são limpas: só o proxy do provedor
@@ -181,7 +182,11 @@ var boardings = app.MapGroup("/boardings").RequireAuthorization("AdminPolicy").W
 
 
 
-app.MapHealthChecks("/health").AllowAnonymous();
+// /health é liveness (não toca no banco): é o que o Render consulta periodicamente, e se
+// batesse no Postgres o Neon nunca suspenderia e consumiria as horas de compute do free.
+// /health/ready inclui o banco, para checagem manual e smoke test.
+app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") }).AllowAnonymous();
 
 
 app.MapAuthEndpoints();

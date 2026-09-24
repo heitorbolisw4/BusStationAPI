@@ -37,7 +37,7 @@ Ensaio local com Postgres (`docker-compose.yml`):
 ```bash
 cp .env.example .env        # preencha POSTGRES_PASSWORD e as duas JWT_*_SECRET_KEY
 docker compose up --build
-curl http://localhost:8080/health   # 200 Healthy
+curl http://localhost:8080/health/ready   # 200 Healthy (inclui o Postgres)
 ```
 
 O Postgres do compose fica em `localhost:5433`. As migrations **não** rodam no boot: aplique com o `efbundle` (próxima seção) usando `Host=localhost;Port=5433;Database=busstation;Username=postgres;Password=<POSTGRES_PASSWORD>`. Se quiser o primeiro admin, preencha `BOOTSTRAP_ADMIN_*` no `.env` e rode `docker compose restart api` depois da migration.
@@ -96,7 +96,8 @@ Host=<host>;Database=neondb;Username=neondb_owner;Password=<senha>;SSL Mode=Requ
 
 ### Endpoints de operação
 
-- `GET /health`: 200 `Healthy` quando o Postgres responde, 503 quando não. É o `healthCheckPath` do Render.
+- `GET /health`: liveness, 200 `Healthy` se o processo está de pé. **Não consulta o banco**, porque é o `healthCheckPath` do Render: se batesse no Postgres a cada checagem, o Neon nunca suspenderia e gastaria as horas de compute do plano free.
+- `GET /health/ready`: 200 quando o Postgres responde, 503 quando não. Use para checagem manual e no smoke test.
 - `GET /swagger`: UI do Swagger (fora de `Production`).
 
 ## Deploy no Render (API)
