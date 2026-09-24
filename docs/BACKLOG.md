@@ -20,18 +20,6 @@
 ---
 
 
-### [BUG-030] Duas compras simultâneas da última vaga passam as duas (overbooking)
-**Prioridade:** Must | **Estimativa:** S
-**Origem:** revisão do contrato no FEAT-025 (agente do front), confirmado em `TicketEndpoints.CreateTicket`
-**Contexto:** a compra lê `Boarding.Seat`, checa `> 0`, subtrai em memória e salva (`UPDATE ... SET "Seat" = <valor calculado>`). Sem controle de concorrência, duas requests que leem `Seat = 1` ao mesmo tempo gravam as duas `Seat = 0` e criam dois tickets.
-**Critério de aceite:**
-- [ ] Decremento atômico (`ExecuteUpdate ... SET Seat = Seat - 1 WHERE Id = @id AND Seat > 0`, conferindo linhas afetadas) ou concurrency token (`xmin`) com retry/409
-- [ ] Ticket e decremento na mesma transação
-- [ ] Teste E2E: N compras paralelas da última vaga → exatamente 1 × 201, as outras "sem vaga", `Seat` final = 0
-**Status:** To Do
-
----
-
 ### [BUG-015] Reajuste de preço/km quebra quando a distância tem mais de uma rota
 **Prioridade:** Must | **Estimativa:** S
 **Origem:** suíte E2E (`CHORE-010`)

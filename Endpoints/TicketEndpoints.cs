@@ -27,11 +27,20 @@ namespace BusStation_API.Endpoints
             if(error is not null)
                 return Results.BadRequest( new { message = error } );
 
-            var boarding = await db.Boardings.Include(b => b.Routes).FirstOrDefaultAsync(b => b.Id == request.BoardingId);
+            // AsNoTracking: o Seat lido aqui é só para montar a resposta; quem decide se há
+            // vaga é o UPDATE atômico abaixo, nunca este valor (que pode já estar velho).
+            var boarding = await db.Boardings.AsNoTracking().Include(b => b.Routes).FirstOrDefaultAsync(b => b.Id == request.BoardingId);
             if(boarding is null || boarding.Routes is null)
                 return Results.NotFound();
 
-            if(boarding.Seat <= 0)
+            await using var transaction = await db.Database.BeginTransactionAsync();
+
+            // Decremento atômico (BUG-030): o banco só baixa a vaga se ainda houver alguma.
+            // Com "ler, subtrair e salvar", compras simultâneas liam o mesmo Seat e todas passavam.
+            var reserved = await db.Boardings
+                .Where(b => b.Id == boarding.Id && b.Seat > 0)
+                .ExecuteUpdateAsync(s => s.SetProperty(b => b.Seat, b => b.Seat - 1));
+            if(reserved == 0)
                 return Results.BadRequest( new { message = "Dont have seats" } );
 
             Ticket ticket = new()
@@ -42,10 +51,10 @@ namespace BusStation_API.Endpoints
                 PurchasedOn = DateTime.UtcNow,
                 BoardingDate = boarding.BoardingDate
             };
-            boarding.Seat -= 1;
 
             db.Add(ticket);
             await db.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             ticket.Boarding = boarding;
             return Results.Created( "/tickets/", ToResponse(ticket));

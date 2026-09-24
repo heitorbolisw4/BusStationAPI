@@ -83,5 +83,27 @@ namespace BusStation_API.E2E
             Assert.Empty(await _api.Search(Seed.Uberlandia, Seed.Uberaba, date));
             Assert.Empty((await second.GetFromJsonAsync<List<TicketDto>>("/tickets/list"))!);
         }
+
+        [Fact]
+        public async Task Parallel_purchases_of_the_last_seats_never_oversell()
+        {
+            const int seats = 2;
+            const int buyers = 10;
+
+            var date = TestApi.UniqueFutureDate();
+            var route = await _api.CreateRoute(Seed.UberlandiaToUberaba);
+            var boarding = await _api.CreateBoarding(route.Id, date, new TimeOnly(9, 0), seats);
+
+            var customers = await Task.WhenAll(Enumerable.Range(0, buyers).Select(_ => _api.NewCustomer()));
+
+            // Todos disparam juntos: sem decremento atômico, várias requests leem o mesmo
+            // Seat e gravam o mesmo valor, vendendo mais passagens do que vagas (BUG-030).
+            var responses = await Task.WhenAll(customers.Select(c =>
+                c.PostAsJsonAsync("/tickets/create", new { boardingId = boarding.Id })));
+
+            Assert.Equal(seats, responses.Count(r => r.StatusCode == HttpStatusCode.Created));
+            Assert.Equal(buyers - seats, responses.Count(r => r.StatusCode == HttpStatusCode.BadRequest));
+            Assert.Empty(await _api.Search(Seed.Uberlandia, Seed.Uberaba, date));
+        }
     }
 }
