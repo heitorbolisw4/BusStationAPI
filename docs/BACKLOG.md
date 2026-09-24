@@ -20,6 +20,18 @@
 ---
 
 
+### [BUG-032] Nome de rota com mais de 20 caracteres devolve 500
+**Prioridade:** Should | **Estimativa:** XS
+**Origem:** cadastro das primeiras rotas no staging (2026-09-24)
+**Contexto:** `Route.RouteName` tem `HasMaxLength(20)` no `AppDbContext`, mas `ValidateRoute` só exige 5+ caracteres. `POST /routes/create` com `"Indianopolis - Uberlandia"` (25) estoura `DbUpdateException` (22001) → 500 cru. 20 caracteres também é pouco para "Cidade A → Cidade B".
+**Critério de aceite:**
+- [ ] Validação devolve `400` com mensagem quando o nome passa do limite
+- [ ] Decidir com a liderança se o limite sobe (ex.: 100, exige migration)
+- [ ] Teste E2E cobre nome no limite e acima dele
+**Status:** To Do
+
+---
+
 ### [BUG-015] Reajuste de preço/km quebra quando a distância tem mais de uma rota
 **Prioridade:** Must | **Estimativa:** S
 **Origem:** suíte E2E (`CHORE-010`)
@@ -161,7 +173,7 @@
 **Prioridade:** Must | **Estimativa:** S
 **Origem:** `../docs/deploy/escopo-deploy.md`, §4
 **Critério de aceite:** ver o escopo do deploy (script contra `BASE_URL` cobrindo `/health/ready` → compra → `/tickets/list`, com timeout de 90s na 1ª request por causa do cold start).
-**Status:** Blocked (depende de FEAT-025 e de embarque cadastrado pelo admin)
+**Status:** In Progress. Smoke via API ok em 2026-09-24 (busca → compra 201 → minhas passagens → vaga 40→39); falta o E2E de compra pela UI.
 
 ---
 
