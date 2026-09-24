@@ -29,7 +29,7 @@ namespace BusStation_API.Endpoints
 
             // AsNoTracking: o Seat lido aqui é só para montar a resposta; quem decide se há
             // vaga é o UPDATE atômico abaixo, nunca este valor (que pode já estar velho).
-            var boarding = await db.Boardings.AsNoTracking().Include(b => b.Routes).FirstOrDefaultAsync(b => b.Id == request.BoardingId);
+            var boarding = await WithTrip(db.Boardings.AsNoTracking()).FirstOrDefaultAsync(b => b.Id == request.BoardingId);
             if(boarding is null || boarding.Routes is null)
                 return Results.NotFound();
 
@@ -66,9 +66,8 @@ namespace BusStation_API.Endpoints
             if(userId is null)
                 return Results.Unauthorized();
 
-            var tickets = await db.Tickets
+            var tickets = await WithTrip(db.Tickets)
                 .Where(t => t.UserId == userId)
-                .Include(t => t.Boarding).ThenInclude(b => b!.Routes)
                 .Select(t => ToResponse(t))
                 .ToListAsync();
 
@@ -81,8 +80,7 @@ namespace BusStation_API.Endpoints
             if(userId is null)
                 return Results.Unauthorized();
 
-            var ticket = await db.Tickets
-                .Include(t => t.Boarding).ThenInclude(b => b!.Routes)
+            var ticket = await WithTrip(db.Tickets)
                 .SingleOrDefaultAsync(t => t.Id == id && t.UserId == userId);
 
             if(ticket is null || ticket.Boarding is null)
@@ -91,9 +89,21 @@ namespace BusStation_API.Endpoints
             return Results.Ok(ToResponse(ticket));
         }
 
+        // Embarque → rota → distância → cidades: tudo que a resposta de passagem mostra.
+        private static IQueryable<Boarding> WithTrip(IQueryable<Boarding> boardings) =>
+            boardings
+                .Include(b => b.Routes).ThenInclude(r => r!.Distance).ThenInclude(d => d!.OriginCity)
+                .Include(b => b.Routes).ThenInclude(r => r!.Distance).ThenInclude(d => d!.DestinationCity);
+
+        private static IQueryable<Ticket> WithTrip(IQueryable<Ticket> tickets) =>
+            tickets
+                .Include(t => t.Boarding).ThenInclude(b => b!.Routes).ThenInclude(r => r!.Distance).ThenInclude(d => d!.OriginCity)
+                .Include(t => t.Boarding).ThenInclude(b => b!.Routes).ThenInclude(r => r!.Distance).ThenInclude(d => d!.DestinationCity);
+
         private static TicketResponse ToResponse(Ticket ticket)
         {
             var boarding = ticket.Boarding!;
+            var distance = boarding.Routes?.Distance;
             return new TicketResponse(
                 ticket.Id,
                 ticket.BoardingId,
@@ -102,7 +112,9 @@ namespace BusStation_API.Endpoints
                 ticket.BoardingDate,
                 boarding.BoardingTime,
                 ticket.FarePaid,
-                ticket.PurchasedOn
+                ticket.PurchasedOn,
+                distance?.OriginCity?.CityName ?? string.Empty,
+                distance?.DestinationCity?.CityName ?? string.Empty
             );
         }
 

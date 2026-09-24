@@ -95,5 +95,26 @@ namespace BusStation_API.E2E
             Assert.True(response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
                 $"esperado 401/403, veio {(int)response.StatusCode}");
         }
+
+        [Fact]
+        public async Task Ticket_shows_origin_and_destination_cities_regardless_of_the_route_name()
+        {
+            // Nome de rota é texto livre do admin e pode não dizer nada sobre o trecho (FEAT-031).
+            var route = await _api.CreateRoute(Seed.UberlandiaToUberaba);
+            var boarding = await _api.CreateBoarding(route.Id, TestApi.UniqueFutureDate(), new TimeOnly(10, 0));
+            var customer = await _api.NewCustomer();
+
+            var bought = await customer.PostAsJsonAsync("/tickets/create", new { boardingId = boarding.Id });
+            await Expect.Status(bought, HttpStatusCode.Created);
+            var created = (await bought.Content.ReadFromJsonAsync<TicketDto>())!;
+            var listed = (await customer.GetFromJsonAsync<List<TicketDto>>("/tickets/list"))!.Single();
+            var byId = (await customer.GetFromJsonAsync<TicketDto>($"/tickets/list/{created.Id}"))!;
+
+            foreach(var ticket in new[] { created, listed, byId })
+            {
+                Assert.Equal("Uberlandia", ticket.OriginCity);
+                Assert.Equal("Uberaba", ticket.DestinationCity);
+            }
+        }
     }
 }

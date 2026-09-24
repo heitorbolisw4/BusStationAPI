@@ -41,7 +41,9 @@ namespace BusStation_API.E2E.Infrastructure
         DateOnly BoardingDate,
         TimeOnly BoardingTime,
         float FarePaid,
-        DateTime PurchasedOn);
+        DateTime PurchasedOn,
+        string OriginCity,
+        string DestinationCity);
 
     public record UserProfileDto(int Id, string Name, string Email, int Age);
 

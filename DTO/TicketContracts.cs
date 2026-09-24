@@ -11,6 +11,8 @@ namespace BusStation_API.DTO
             DateOnly BoardingDate,
             TimeOnly BoardingTime,
             float FarePaid,
-            DateTime PurchasedOn);
+            DateTime PurchasedOn,
+            string OriginCity,
+            string DestinationCity);
     }
 }

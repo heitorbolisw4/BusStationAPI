@@ -96,17 +96,6 @@
 
 ---
 
-### [FEAT-031] `TicketResponse` com cidade de origem e destino
-**Prioridade:** Could | **Estimativa:** XS
-**Origem:** revisão do contrato no FEAT-025 (agente do front)
-**Contexto:** "Minhas passagens" só consegue mostrar `routeName`, que é texto livre do admin. Com origem e destino a tela não depende de o admin dar bons nomes às rotas.
-**Critério de aceite:**
-- [ ] `TicketResponse` inclui `originCity` e `destinationCity` (campos novos, sem quebrar os atuais)
-- [ ] Teste E2E cobre os campos
-**Status:** To Do
-
----
-
 ### [DEBT-028] Limpeza de refresh tokens expirados/revogados
 **Prioridade:** Could | **Estimativa:** S
 **Origem:** `ARCHITECTURE.md` §7 (refresh token, `FEAT-027`)
