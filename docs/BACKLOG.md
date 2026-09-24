@@ -20,18 +20,6 @@
 ---
 
 
-### [BUG-032] Nome de rota com mais de 20 caracteres devolve 500
-**Prioridade:** Should | **Estimativa:** XS
-**Origem:** cadastro das primeiras rotas no staging (2026-09-24)
-**Contexto:** `Route.RouteName` tem `HasMaxLength(20)` no `AppDbContext`, mas `ValidateRoute` só exige 5+ caracteres. `POST /routes/create` com `"Indianopolis - Uberlandia"` (25) estoura `DbUpdateException` (22001) → 500 cru. 20 caracteres também é pouco para "Cidade A → Cidade B".
-**Critério de aceite:**
-- [ ] Validação devolve `400` com mensagem quando o nome passa do limite
-- [ ] Decidir com a liderança se o limite sobe (ex.: 100, exige migration)
-- [ ] Teste E2E cobre nome no limite e acima dele
-**Status:** To Do
-
----
-
 ### [BUG-015] Reajuste de preço/km quebra quando a distância tem mais de uma rota
 **Prioridade:** Must | **Estimativa:** S
 **Origem:** suíte E2E (`CHORE-010`)

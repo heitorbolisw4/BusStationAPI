@@ -115,6 +115,10 @@ namespace BusStation_API.Endpoints
             {
                 return "You must type a valid Route Name";
             }
+            if (routeName.Length > Route.RouteNameMaxLength)
+            {
+                return $"Route Name must be at most {Route.RouteNameMaxLength} characters";
+            }
             if(distanceId <= 0)
             {
                 return "Enter a valid distance Id";

@@ -73,7 +73,7 @@ namespace BusStation_API.Data
             modelBuilder.Entity<Route>(entity =>
             {
                 entity.HasKey(r => r.Id);
-                entity.Property(r => r.RouteName).HasMaxLength(20);
+                entity.Property(r => r.RouteName).HasMaxLength(Route.RouteNameMaxLength);
                 entity.HasOne(r => r.Distance).WithMany(d => d.Routes).HasForeignKey(r => r.DistanceId);
             
             });

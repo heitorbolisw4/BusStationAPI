@@ -72,6 +72,24 @@ namespace BusStation_API.E2E
             await Expect.Status(await client.GetAsync("/routes/list/999999"), HttpStatusCode.NotFound);
         }
 
+        [Fact]
+        public async Task Route_name_accepts_a_readable_leg_name_up_to_100_chars_and_rejects_longer_with_400()
+        {
+            var client = await _api.Admin();
+
+            // "Cidade A → Cidade B" passa de 20 caracteres com facilidade (BUG-032).
+            var readable = $"Indianópolis → Uberlândia {TestApi.Unique("")}";
+            var atLimit = TestApi.Unique("R-").PadRight(100, 'x');
+            var tooLong = TestApi.Unique("R-").PadRight(101, 'x');
+
+            await Expect.Status(await client.PostAsJsonAsync("/routes/create", new { routeName = readable, distanceId = Seed.IndianopolisToUberlandia }), HttpStatusCode.Created);
+            await Expect.Status(await client.PostAsJsonAsync("/routes/create", new { routeName = atLimit, distanceId = Seed.IndianopolisToUberlandia }), HttpStatusCode.Created);
+
+            var rejected = await client.PostAsJsonAsync("/routes/create", new { routeName = tooLong, distanceId = Seed.IndianopolisToUberlandia });
+            await Expect.Status(rejected, HttpStatusCode.BadRequest);
+            Assert.Contains("100", (await rejected.Content.ReadFromJsonAsync<ErrorDto>())!.Message);
+        }
+
         [Theory]
         [InlineData("GET", "/distances/list")]
         [InlineData("PUT", "/distances/create")]
