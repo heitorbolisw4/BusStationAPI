@@ -23,7 +23,7 @@ Program.cs            bootstrap: DI, auth schemes, CORS, Swagger, grupos de rota
        └─ Data/AppDbContext.cs   Fluent API (OnModelCreating) + seed data (HasData)
 ```
 
-Módulos já extraídos para `Endpoints/`: `AuthEndpoints`, `UserEndpoints`, `CityEndpoints`, `RouteEndpoints`, `DistanceEndpoints`, `BoardingEndpoints`, `PriceEndpoints`, `TicketEndpoints`. `Program.cs` hoje só tem o bootstrap e o módulo `Admin` (criação de admin) ainda inline.
+Módulos já extraídos para `Endpoints/`: `AuthEndpoints`, `UserEndpoints`, `CityEndpoints`, `RouteEndpoints`, `DistanceEndpoints`, `BoardingEndpoints`, `PriceEndpoints`, `TicketEndpoints`. `Program.cs` hoje só tem o bootstrap (DI, auth, CORS, Swagger) e o wiring dos grupos; a criação de admin foi para `AuthEndpoints` e as classes antigas `DTO/<Módulo>/*Dto.cs` foram removidas (`6227a5f`).
 
 ## 3. Modelo de domínio
 
@@ -45,7 +45,7 @@ Itens abaixo têm ticket correspondente em `BACKLOG.md` — este documento expli
 1. **Checagem de cidade duplicada não cobre `Acronym`** (`CityEndpoints.Create`) — só compara `CityName`. `Acronym` tem índice único no banco (`AppDbContext`), então duas cidades com o mesmo `Acronym` não caem no `Results.Conflict()` esperado: estouram `DbUpdateException` não tratada (500 cru). → `BUG-001`
 2. **RNF-01 ainda aberto (D-01 não resolvida):** os grupos `/cities`, `/routes` e `/boardings` não exigem nenhuma autenticação — nem login, nem `AdminPolicy`. A infraestrutura de Admin já existe e funciona (`AdminTokenService` emite a claim `"adm"`, `AdminPolicy` já é usada em `/prices`, `/distances`), só falta aplicar aos grupos certos. → `FEAT-003`
 3. **Valores monetários em `float`** (`Price.PricePerKm`, `Route.Price`, `Ticket.FarePaid`) — RNF-03. `decimal` é o tipo correto para dinheiro (evita erro de arredondamento binário). → `DEBT-002`
-4. **Grupos `origins` e `destination` mortos em `Program.cs`** (declarados, nunca usados — sobra da migração Origin/Destination → City feita antes deste documento existir). → `CHORE-004`
+4. **Login de admin com verificação de senha invertida + `POST /admin/create` anônimo** (`AuthEndpoints`). → `BUG-009`
 5. **Sem padronização de erro** (RNF-04) — cada endpoint devolve `BadRequest(new { message })` manualmente; sem `ProblemDetails` nem middleware central. → `DEBT-005`
 6. **Sem paginação em `/list`** (RNF-06) — aceitável com o volume atual de seed data, não escala. → `DEBT-006`
 7. **Convenção de rota inconsistente** (RNF-05) — mistura `/create`, `/list/{id}` com verbos HTTP que já expressam a ação (ex.: `CityEndpoints` usa `POST /create` em vez de `POST /`). → `DEBT-008`

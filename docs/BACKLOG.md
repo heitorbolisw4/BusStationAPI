@@ -19,6 +19,18 @@
 
 ---
 
+### [BUG-009] Login de admin aceita senha errada e rejeita a certa
+**Prioridade:** Must | **Estimativa:** XS
+**Origem:** encontrado durante o refactor `6227a5f`
+**Contexto:** `AuthEndpoints.AdminLogin` checa `service.PasswordVerify(...)` sem o `!` (o `Login` de usuário tem). Resultado: token de admin sai pra quem erra a senha, e quem acerta leva 401. Além disso, `POST /admin/create` é anônimo: qualquer um cria um admin.
+**Critério de aceite:**
+- [ ] `POST /admin/login` com senha correta → `200` + token; com senha errada → `401`
+- [ ] Teste de regressão cobre os dois casos
+- [ ] Decidir com a liderança quem pode chamar `POST /admin/create` (seed + `AdminPolicy`?) e registrar a decisão
+**Status:** To Do
+
+---
+
 ### [DEBT-002] Valores monetários em `float` deveriam ser `decimal`
 **Prioridade:** Must | **Estimativa:** M
 **Origem:** RNF-03 (`REQUISITOS.md`), `ARCHITECTURE.md` §4.3
@@ -40,17 +52,6 @@
 - [ ] Request com token de User (não Admin) retorna `403`
 - [ ] Request com token de Admin continua funcionando
 - [ ] `GET`s de leitura pública (busca de rotas/embarques) continuam acessíveis sem login — confirmar quais realmente devem ficar públicos antes de proteger o grupo inteiro
-**Status:** To Do
-
----
-
-### [CHORE-004] Remover grupos mortos `origins`/`destination` em `Program.cs`
-**Prioridade:** Should | **Estimativa:** XS
-**Origem:** `ARCHITECTURE.md` §4.4
-**Contexto:** `var origins = ...` e `var destination = ...` são declarados mas nunca têm endpoint mapeado — sobra da migração Origin/Destination → City.
-**Critério de aceite:**
-- [ ] Linhas removidas, build continua limpo
-- [ ] `DTO/Origin/*` e `DTO/Destination/*` removidos se não houver mais nenhuma referência
 **Status:** To Do
 
 ---

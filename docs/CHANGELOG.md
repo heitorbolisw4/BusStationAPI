@@ -2,6 +2,10 @@
 
 > Uma linha por entrega, com hash do commit. Histórico completo e detalhado fica no `git log` — aqui é só o "o que foi entregue", não o "como".
 
+## 2026-09-24
+
+- **[DONE] Terminada a extração de `Program.cs` e removidos os DTOs antigos** (`DTO/Admin`, `Boarding`, `Destination`, `Distance`, `Origin`, `Route`) — `POST /admin/create` foi para `AuthEndpoints`; `GET /boardings/search` (estava comentado, o front depende dele) voltou em `BoardingEndpoints`; `/distances` voltou a exigir `AdminPolicy` (estava anônimo desde a extração); grupos mortos removidos (fecha `CHORE-004`). `6227a5f`
+
 ## 2026-09-18
 
 - **[DONE] Fechado o módulo de Tickets (RF-26–RF-31) e resolvida a decisão D-02** — `Ticket` passou a referenciar `Boarding` em vez de `Route` (débito de vaga agora ocorre em `Boarding.Seat`); adicionados `GET /tickets/list` e `GET /tickets/list/{id}`, escopados ao usuário autenticado. Corrigidos 3 bugs do refactor em andamento: claim JWT errada (todo login autenticado recebia 401 ao comprar), `Ticket.UserId` nunca setado, débito de vaga que tinha sumido. `86596d3`
