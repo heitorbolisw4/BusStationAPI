@@ -1,5 +1,7 @@
 # BusStationAPI
 
+[![CI](https://github.com/heitorbolisw4/BusStationAPI/actions/workflows/ci.yml/badge.svg)](https://github.com/heitorbolisw4/BusStationAPI/actions/workflows/ci.yml)
+
 API do BusStation (ASP.NET Core 10, minimal API, EF Core + PostgreSQL, JWT com dois schemes: `UserScheme` e `AdminScheme`).
 Visão técnica: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Tickets: [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
@@ -18,6 +20,13 @@ Testes E2E (precisam de um Postgres acessível; o banco `<nome>_e2e` é apagado 
 ```bash
 dotnet test
 ```
+
+## CI
+
+`.github/workflows/ci.yml` roda em todo PR e em push na `main`:
+
+1. **build-test:** `restore` → `build -c Release` → `test`. A suíte E2E roda contra um `postgres:17` subido como `services:` do Actions (`BUSSTATION_E2E_CONNECTION`). As chaves JWT são geradas na hora com `openssl rand` e mascaradas no log.
+2. **docker:** `docker build` da imagem, para que um Dockerfile quebrado seja pego no PR. Não publica a imagem.
 
 ## Docker
 

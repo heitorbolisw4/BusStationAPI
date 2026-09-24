@@ -59,6 +59,7 @@ Itens abaixo têm ticket correspondente em `BACKLOG.md` — este documento expli
 Escopo aprovado em `../docs/deploy/escopo-deploy.md` (repo raiz).
 
 - **Hospedagem (decidida em 2026-09-24):** Render (API, runtime Docker, Virginia) + Neon (Postgres, sa-east-1) + Vercel (front). Staging é o único ambiente público na v1.
+- **CI:** GitHub Actions (`.github/workflows/ci.yml`), em PR e em push na `main`: build + suíte E2E contra `postgres` como service container + `docker build`.
 - **CD:** na v1 o deploy é disparado à mão, e as migrations rodam antes, também à mão, via `efbundle` (§6). CD automático é a fase 2 (`CHORE-020`).
 - **Testes E2E (existem desde 2026-09-24):** `tests/BusStation_API.E2E` — xUnit + `WebApplicationFactory<Program>`, API inteira em memória falando HTTP contra um Postgres real. O banco é `<DefaultConnection>_e2e`, apagado e recriado pelas migrations a cada execução (o de dev nunca é tocado). Connection string: `BUSSTATION_E2E_CONNECTION` ou, na falta dela, a dos user-secrets da API. Rodar: `dotnet test` na raiz do repo. Testes que expõem bug aberto ficam com `Skip = "BUG-xxx: ..."` — corrigir o bug = remover o `Skip` e ver verde.
 - **Testcontainers** continua sendo o próximo passo (dispensa Postgres instalado), mas depende do Docker Desktop rodando.

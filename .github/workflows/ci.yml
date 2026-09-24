@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build + test (E2E contra Postgres)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          # Postgres efêmero do job, só acessível de dentro do runner: não é segredo.
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: busstation
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      # BusStationApiFactory usa esta variável quando existe (sem user-secrets no CI).
+      # O banco é apagado e recriado pelas migrations a cada execução.
+      BUSSTATION_E2E_CONNECTION: Host=localhost;Port=5432;Database=busstation_e2e;Username=postgres;Password=postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # Chaves JWT só para esta execução: geradas na hora, nunca versionadas.
+      - name: Gerar chaves JWT efêmeras
+        run: |
+          user_key="$(openssl rand -base64 48)"
+          admin_key="$(openssl rand -base64 48)"
+          echo "::add-mask::$user_key"
+          echo "::add-mask::$admin_key"
+          echo "JwtSettings__User__SecretKey=$user_key" >> "$GITHUB_ENV"
+          echo "JwtSettings__Admin__SecretKey=$admin_key" >> "$GITHUB_ENV"
+
+      - name: Restore
+        run: dotnet restore BusStation_API.sln
+
+      - name: Build
+        run: dotnet build BusStation_API.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test BusStation_API.sln -c Release --no-build --logger "console;verbosity=normal"
+
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pega Dockerfile quebrado no PR, não no deploy do Render. Não publica a imagem.
+      - name: Build da imagem
+        run: docker build --tag busstation-api:ci .
