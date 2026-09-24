@@ -122,6 +122,17 @@
 
 ---
 
+### [FEAT-029] [front] Logout propagado entre abas
+**Prioridade:** Could | **Estimativa:** XS
+**Origem:** revisão do FEAT-025 (sessão no front)
+**Contexto:** logout numa aba não derruba as outras na hora; elas só caem no próximo 401, quando o refresh falha.
+**Critério de aceite:**
+- [ ] Ouvir o evento `storage`: remoção do refresh token em outra aba encerra a sessão nesta
+- [ ] Teste com dois providers compartilhando o storage
+**Status:** To Do
+
+---
+
 ### [CHORE-026] Migrations no Pre-Deploy Command do Railway
 **Prioridade:** Should | **Estimativa:** S
 **Origem:** troca de Render para Railway (`../docs/deploy/escopo-deploy.md` §6)
