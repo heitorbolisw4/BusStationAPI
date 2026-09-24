@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BusStation_API.Configuration;
 using BusStation_API.Data;
 using BusStation_API.Endpoints;
 using BusStation_API.Entities;
@@ -9,6 +10,8 @@ using BusStation_API.Interface;
 using BusStation_API.Jwt;
 using BusStation_API.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -17,6 +20,10 @@ using Route = BusStation_API.Entities.Route;
 
 #region Aplication
 var builder = WebApplication.CreateBuilder(args);
+
+// Fail-fast: sem connection string / chaves JWT (ou CORS fora de dev) a API nem sobe.
+StartupConfig.EnsureRequiredSettings(builder.Configuration, builder.Environment);
+builder.WebHost.UsePortFromEnvironment(builder.Configuration);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
@@ -124,23 +131,36 @@ builder.Services.AddAuthorization(options =>
 
 
 
-builder.Services.AddCors(options =>
+// CORS lido da config final (Cors:AllowedOrigins) na hora de montar as options, e não
+// aqui no bootstrap, para que o teste E2E consiga trocar as origens por host.
+builder.Services.AddCors();
+builder.Services.AddOptions<CorsOptions>().Configure<IConfiguration, IHostEnvironment>((options, config, env) =>
+    options.AddPolicy(StartupConfig.CorsPolicyName, policy =>
+        policy.WithOrigins(StartupConfig.AllowedOrigins(config, env)).AllowAnyHeader().AllowAnyMethod()));
+
+builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("postgres");
+
+// O Render termina o TLS no proxy e repassa HTTP com X-Forwarded-*. O IP do proxy não é
+// fixo, então as listas de proxies conhecidos são limpas: só o proxy do provedor
+// alcança o container.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.AddPolicy("AllowSpecificOrigin", policy =>
-    {
-       policy.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod(); 
-    });
-
-
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
 });
 
 var app = builder.Build();
-if (app.Environment.IsDevelopment())
+app.UseForwardedHeaders();
+
+// Swagger ligado em Development e Staging (ambiente de estudo, ajuda a debugar);
+// desligado só com ASPNETCORE_ENVIRONMENT=Production. Ver ARCHITECTURE.md.
+if (!app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors("AllowSpecificOrigin");
 }
+app.UseCors(StartupConfig.CorsPolicyName);
 
 
 #endregion
@@ -161,7 +181,7 @@ var boardings = app.MapGroup("/boardings").RequireAuthorization("AdminPolicy").W
 
 
 
-app.MapSwagger();
+app.MapHealthChecks("/health").AllowAnonymous();
 
 
 app.MapAuthEndpoints();

@@ -8,8 +8,8 @@
 
 - **Runtime:** .NET 10, ASP.NET Core Minimal API
 - **Banco:** PostgreSQL via EF Core (Npgsql), migrations versionadas em `Migrations/`
-- **Autenticação:** JWT com dois schemes separados (`UserScheme`, `AdminScheme`) e duas policies (`UserPolicy`, `AdminPolicy` — esta exige a claim `"adm"`)
-- **Documentação de API:** Swagger/OpenAPI (`app.MapSwagger()`, ativo em Development)
+- **Autenticação:** JWT com dois schemes separados (`UserScheme`, `AdminScheme`) e duas policies. `UserPolicy` só aceita o `UserScheme`. `AdminPolicy` autentica pelos dois schemes e exige a claim `"adm"`: sem token → 401, token de cliente → 403, token de admin → ok.
+- **Documentação de API:** Swagger/OpenAPI, ativo em todo ambiente exceto `Production` (ver §6)
 - **Frontend:** React + Vite, consumindo a API via `src/api/*.js` (repo separado, `BusStationFrontEnd`)
 
 ## 2. Camadas
@@ -43,9 +43,9 @@ User ──< Ticket
 Itens abaixo têm ticket correspondente em `BACKLOG.md` — este documento explica o *porquê*, o backlog controla o *quando*.
 
 1. **Checagem de cidade duplicada não cobre `Acronym`** (`CityEndpoints.Create`) — só compara `CityName`. `Acronym` tem índice único no banco (`AppDbContext`), então duas cidades com o mesmo `Acronym` não caem no `Results.Conflict()` esperado: estouram `DbUpdateException` não tratada (500 cru). → `BUG-001`
-2. **RNF-01 ainda aberto (D-01 não resolvida):** os grupos `/cities`, `/routes` e `/boardings` não exigem nenhuma autenticação — nem login, nem `AdminPolicy`. A infraestrutura de Admin já existe e funciona (`AdminTokenService` emite a claim `"adm"`, `AdminPolicy` já é usada em `/prices`, `/distances`), só falta aplicar aos grupos certos. → `FEAT-003`
+2. ~~**RNF-01:** `/cities`, `/routes` e `/boardings` sem autenticação.~~ Resolvido na branch `chore/deploy-staging` (`FEAT-003`): os três grupos exigem `AdminPolicy`, com `AllowAnonymous()` só em `GET /cities/list` e `GET /boardings/search`, que o front chama sem login. Os GETs de `/routes` ficaram protegidos, porque o front não os usa e o `/boardings/search` já traz nome, km e preço da rota.
 3. **Valores monetários em `float`** (`Price.PricePerKm`, `Route.Price`, `Ticket.FarePaid`) — RNF-03. `decimal` é o tipo correto para dinheiro (evita erro de arredondamento binário). → `DEBT-002`
-4. **Login de admin com verificação de senha invertida + `POST /admin/create` anônimo** (`AuthEndpoints`). → `BUG-013`
+4. ~~**Login de admin com verificação de senha invertida + `POST /admin/create` anônimo**~~ Resolvido na branch `chore/deploy-staging` (`BUG-013`). `/admin/create` exige `AdminPolicy`, e o primeiro admin vem do seed de bootstrap (§6).
 8. **Grupo `/tickets` sem policy** — `RequireAuthorization()` cai na policy default, que desafia o scheme `"Bearer"` registrado em `AddAuthentication(...)` mas nunca configurado (os schemes reais são `UserScheme`/`AdminScheme`). Resultado: 500 em toda request. → `BUG-014`
 9. **`PriceEndpoints.UpdatePrice` assume 1 rota por distância** (`SingleOrDefaultAsync`). → `BUG-015`
 5. **Sem padronização de erro** (RNF-04) — cada endpoint devolve `BadRequest(new { message })` manualmente; sem `ProblemDetails` nem middleware central. → `DEBT-005`
@@ -54,10 +54,21 @@ Itens abaixo têm ticket correspondente em `BACKLOG.md` — este documento expli
 
 **Achados antigos já corrigidos** (estavam listados na seção 10 do `REQUISITOS.md` original, de 26/07/2026, e não se aplicam mais ao código atual — removidos de lá para não virar informação morta): `routes.MapGet("/list/{id:int}")` não retornava `Ok(...)`; `routes.MapPatch("/update/{id:int}")` tinha o recálculo de preço comentado; `Route.TicketId` órfão; endpoint de criação de ticket inteiro comentado. Todos resolvidos nos commits de refactor até 18/09/2026.
 
-## 5. CI/CD e ambientes (planejado — ver `BACKLOG.md`, ainda não implementado)
+## 5. CI/CD e ambientes
 
-- **CI:** GitHub Actions — `dotnet build` + `dotnet test` em todo PR.
-- **CD:** deploy automático em `staging` a cada merge em `main`; `prod` por deploy manual/tag.
-- **Hospedagem candidata:** Railway ou Fly.io para API + Postgres (Dockerfile); Vercel ou Netlify para o frontend.
+Escopo aprovado em `../docs/deploy/escopo-deploy.md` (repo raiz).
+
+- **Hospedagem (decidida em 2026-09-24):** Render (API, runtime Docker, Virginia) + Neon (Postgres, sa-east-1) + Vercel (front). Staging é o único ambiente público na v1.
+- **CD:** na v1 o deploy é disparado à mão, e as migrations rodam antes, também à mão, via `efbundle` (§6). CD automático é a fase 2 (`CHORE-020`).
 - **Testes E2E (existem desde 2026-09-24):** `tests/BusStation_API.E2E` — xUnit + `WebApplicationFactory<Program>`, API inteira em memória falando HTTP contra um Postgres real. O banco é `<DefaultConnection>_e2e`, apagado e recriado pelas migrations a cada execução (o de dev nunca é tocado). Connection string: `BUSSTATION_E2E_CONNECTION` ou, na falta dela, a dos user-secrets da API. Rodar: `dotnet test` na raiz do repo. Testes que expõem bug aberto ficam com `Skip = "BUG-xxx: ..."` — corrigir o bug = remover o `Skip` e ver verde.
 - **Testcontainers** continua sendo o próximo passo (dispensa Postgres instalado), mas depende do Docker Desktop rodando.
+
+## 6. Configuração de deploy (decisões)
+
+- **Swagger:** UI e JSON ligados em Development e Staging, desligados só com `ASPNETCORE_ENVIRONMENT=Production`. Staging é ambiente de estudo, e o Swagger ajuda a debugar ali. Como hoje não existe `Production`, a regra já deixa o caminho pronto.
+- **CORS:** origens vêm de `Cors:AllowedOrigins` (lista ou valor único separado por vírgula) e a policy é aplicada em todo ambiente. Em Development, sem configuração, cai em `http://localhost:5173`. Fora de Development, a lista vazia derruba o startup. A policy é montada via `IOptions<CorsOptions>` lendo a configuração final, para o E2E conseguir trocar as origens por host.
+- **Fail-fast:** `StartupConfig.EnsureRequiredSettings` falha o startup, listando tudo o que falta, se estiverem vazias a connection string ou as duas `SecretKey`, ou se alguma chave tiver menos de 32 bytes (limite do HMAC-SHA256). `Issuer`/`Audience` não são segredo e têm padrão no `appsettings.json`.
+- **Connection string do Neon:** convertida **à mão** de URI para o formato Npgsql na hora de cadastrar a variável (documentado no README). Um parser no startup seria só mais código para testar, e resolve um problema que acontece uma vez.
+- **Health check:** `GET /health` com `AddDbContextCheck<AppDbContext>` (faz um `CanConnect` no Postgres). O pacote é o first-party da Microsoft, na mesma versão do EF Core.
+- **Proxy/porta:** `UseForwardedHeaders` (For + Proto) com as listas de proxies conhecidos limpas, porque o IP do proxy do Render não é fixo. A porta vem de `PORT` quando existe (Render), senão de `ASPNETCORE_HTTP_PORTS`.
+- **Primeiro admin:** `AdminBootstrapper` roda no startup (`IHostedService`) e cria um admin a partir de `BOOTSTRAP_ADMIN_EMAIL`/`BOOTSTRAP_ADMIN_PASSWORD` só se não existir nenhum. Se o banco ainda não tiver as tabelas, registra o erro no log e a API sobe mesmo assim. O seed não roda dentro da migration para que a senha não vá parar no repositório.
