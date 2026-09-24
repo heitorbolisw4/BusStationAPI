@@ -19,6 +19,20 @@ Testes E2E (precisam de um Postgres acessível; o banco `<nome>_e2e` é apagado 
 dotnet test
 ```
 
+## Docker
+
+A imagem é a mesma que o Render usa: `Dockerfile` multi-stage (`sdk:10.0` compila → `aspnet:10.0` roda, como usuário não-root `app`), escutando em `8080` (ou na `PORT` do provedor).
+
+Ensaio local com Postgres (`docker-compose.yml`):
+
+```bash
+cp .env.example .env        # preencha POSTGRES_PASSWORD e as duas JWT_*_SECRET_KEY
+docker compose up --build
+curl http://localhost:8080/health   # 200 Healthy
+```
+
+O Postgres do compose fica em `localhost:5433`. As migrations **não** rodam no boot: aplique com o `efbundle` (próxima seção) usando `Host=localhost;Port=5433;Database=busstation;Username=postgres;Password=<POSTGRES_PASSWORD>`. Se quiser o primeiro admin, preencha `BOOTSTRAP_ADMIN_*` no `.env` e rode `docker compose restart api` depois da migration.
+
 ## Configuração (variáveis de ambiente)
 
 Fora de Development não existe user-secrets: tudo vem de variável de ambiente. Se faltar algo obrigatório, **a API não sobe** e o log diz exatamente o que falta (fail-fast).
