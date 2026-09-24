@@ -120,7 +120,7 @@ namespace BusStation_API.E2E
         public async Task Creating_a_boarding_validates_route_seats_and_date()
         {
             var route = await _api.CreateRoute(Seed.IndianopolisToUberlandia);
-            var client = _api.Anonymous();
+            var client = await _api.Admin();
             var date = TestApi.UniqueFutureDate();
 
             var noSeats = await client.PostAsJsonAsync("/boardings/create",

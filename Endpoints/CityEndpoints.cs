@@ -11,7 +11,8 @@ namespace BusStation_API.Endpoints
         public static IEndpointRouteBuilder MapCitiesEnpoints(this IEndpointRouteBuilder app)
         {
             app.MapPost("/create", Create);
-            app.MapGet("/list", List);
+            // público: o front lista as cidades na tela inicial sem login
+            app.MapGet("/list", List).AllowAnonymous();
             app.MapPut("/update/{id:int}", Update);
             app.MapDelete("/delete/{id:int}", Delete);
 

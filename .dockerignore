@@ -1,0 +1,26 @@
+# build local
+**/bin/
+**/obj/
+# testes E2E não vão para a imagem
+tests/
+# IDE / git / CI
+.vs/
+.vscode/
+.idea/
+.git/
+.github/
+# config local e segredos
+appsettings.Development.json
+**/*.user
+.env
+.env.*
+# artefatos de deploy
+efbundle
+efbundle.exe
+publish/
+# docs não fazem parte do runtime
+docs/
+*.md
+Dockerfile
+docker-compose.yml
+.dockerignore

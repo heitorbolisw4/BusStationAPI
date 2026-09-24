@@ -3,7 +3,6 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using BusStation_API.Data;
 using BusStation_API.Entities;
-using BusStation_API.Interface;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -84,23 +83,42 @@ namespace BusStation_API.E2E.Infrastructure
         }
 
         /// <summary>
-        /// Cria o admin pela API, mas emite o token direto pelo ITokenService da aplicação:
-        /// POST /admin/login está quebrado (BUG-013) e não pode ser pré-requisito de todo
-        /// teste administrativo.
+        /// Grava um admin direto no banco, como o seed de bootstrap faria (POST /admin/create
+        /// exige um admin logado, então alguém precisa ser o primeiro).
         /// </summary>
-        public async Task<HttpClient> NewAdmin()
+        public async Task<(string Email, string Password)> CreateAdminAccount()
         {
             var email = $"{Unique("admin")}@e2e.test";
-            var response = await Anonymous().PostAsJsonAsync("/admin/create",
-                new { name = "E2E Admin", email, password = "admin123" });
-            await Expect.Status(response, HttpStatusCode.Created);
+            const string password = "admin123";
 
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var admin = await db.Admins.SingleAsync(a => a.Email == email);
-            var token = scope.ServiceProvider.GetRequiredService<ITokenService<Admin>>().GenerateToken(admin);
+            db.Admins.Add(new Admin { Name = "E2E Admin", Email = email, Password = BCrypt.Net.BCrypt.HashPassword(password) });
+            await db.SaveChangesAsync();
 
-            return WithToken(token);
+            return (email, password);
+        }
+
+        public async Task<string> AdminLogin(string email, string password)
+        {
+            var response = await Anonymous().PostAsJsonAsync("/admin/login", new { email, password });
+            await Expect.Status(response, HttpStatusCode.OK);
+            return (await response.Content.ReadFromJsonAsync<TokenResponse>())!.Token;
+        }
+
+        private Task<HttpClient>? _admin;
+
+        /// <summary>
+        /// Admin compartilhado pelos helpers de "arrange" desta instância (uma por teste).
+        /// O catálogo (cidade, rota, embarque) só é escrito por admin (FEAT-003).
+        /// </summary>
+        public Task<HttpClient> Admin() => _admin ??= NewAdmin();
+
+        /// <summary>Admin novo, logado pelo POST /admin/login de verdade.</summary>
+        public async Task<HttpClient> NewAdmin()
+        {
+            var (email, password) = await CreateAdminAccount();
+            return WithToken(await AdminLogin(email, password));
         }
 
         public async Task<CityDto> CreateCity()
@@ -108,12 +126,11 @@ namespace BusStation_API.E2E.Infrastructure
             var cityName = Unique("City ");
             // Acronym tem índice único e no máximo 5 caracteres
             var acronym = Guid.NewGuid().ToString("N")[..5].ToUpperInvariant();
-            var client = Anonymous();
 
-            var response = await client.PostAsJsonAsync("/cities/create", new { cityName, state = "MG", acronym });
+            var response = await (await Admin()).PostAsJsonAsync("/cities/create", new { cityName, state = "MG", acronym });
             await Expect.Status(response, HttpStatusCode.Created);
 
-            var cities = await client.GetFromJsonAsync<List<CityDto>>("/cities/list");
+            var cities = await Anonymous().GetFromJsonAsync<List<CityDto>>("/cities/list");
             return cities!.Single(c => c.CityName == cityName);
         }
 
@@ -143,7 +160,7 @@ namespace BusStation_API.E2E.Infrastructure
         public async Task<RouteDto> CreateRoute(int distanceId)
         {
             var routeName = Unique("R-");
-            var client = Anonymous();
+            var client = await Admin();
 
             var response = await client.PostAsJsonAsync("/routes/create", new { routeName, distanceId });
             await Expect.Status(response, HttpStatusCode.Created);
@@ -155,7 +172,7 @@ namespace BusStation_API.E2E.Infrastructure
 
         public async Task<BoardingCreatedDto> CreateBoarding(int routeId, DateOnly date, TimeOnly time, int seats = 40)
         {
-            var response = await Anonymous().PostAsJsonAsync("/boardings/create",
+            var response = await (await Admin()).PostAsJsonAsync("/boardings/create",
                 new { routeId, seats, boardingDate = date, boardingTime = time });
             await Expect.Status(response, HttpStatusCode.Created);
             return (await response.Content.ReadFromJsonAsync<BoardingCreatedDto>())!;

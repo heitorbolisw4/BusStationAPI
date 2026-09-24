@@ -126,20 +126,36 @@ namespace BusStation_API.E2E
             Assert.False(string.IsNullOrEmpty(await _api.Login(newEmail, password)));
         }
 
-        [Fact(Skip = "BUG-013: AdminLogin verifica a senha sem o '!' — aceita senha errada e rejeita a certa")]
+        [Fact]
         public async Task Admin_login_accepts_the_right_password_and_rejects_a_wrong_one()
         {
-            var email = $"{TestApi.Unique("admin")}@e2e.test";
+            var (email, password) = await _api.CreateAdminAccount();
             var client = _api.Anonymous();
-            await Expect.Status(
-                await client.PostAsJsonAsync("/admin/create", new { name = "Adm", email, password = "admin123" }),
-                HttpStatusCode.Created);
 
-            var right = await client.PostAsJsonAsync("/admin/login", new { email, password = "admin123" });
+            var right = await client.PostAsJsonAsync("/admin/login", new { email, password });
             var wrong = await client.PostAsJsonAsync("/admin/login", new { email, password = "wrong-pass" });
+            var unknown = await client.PostAsJsonAsync("/admin/login", new { email = "ghost@e2e.test", password });
 
             await Expect.Status(right, HttpStatusCode.OK);
+            Assert.False(string.IsNullOrEmpty((await right.Content.ReadFromJsonAsync<TokenResponse>())!.Token));
             await Expect.Status(wrong, HttpStatusCode.Unauthorized);
+            await Expect.Status(unknown, HttpStatusCode.Unauthorized);
+        }
+
+        [Fact]
+        public async Task Admin_create_requires_an_admin_token()
+        {
+            var body = new { name = "Intruso", email = $"{TestApi.Unique("admin")}@e2e.test", password = "admin123" };
+
+            var anonymous = await _api.Anonymous().PostAsJsonAsync("/admin/create", body);
+            await Expect.Status(anonymous, HttpStatusCode.Unauthorized);
+
+            var admin = await _api.NewAdmin();
+            var created = await admin.PostAsJsonAsync("/admin/create", body);
+            await Expect.Status(created, HttpStatusCode.Created);
+
+            // o admin criado por outro admin consegue logar
+            Assert.False(string.IsNullOrEmpty(await _api.AdminLogin(body.email, body.password)));
         }
     }
 }

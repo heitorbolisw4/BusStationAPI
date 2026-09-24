@@ -1,0 +1,41 @@
+# Ensaio local do deploy: API (mesma imagem do Render) + Postgres.
+#   cp .env.example .env   # e preencha
+#   docker compose up --build
+#   curl http://localhost:8080/health
+# Migrations NÃO rodam no boot (CHORE-023): aplique com o efbundle apontando para
+# localhost:5433 (ver README) e reinicie a API se quiser o seed do primeiro admin.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: busstation
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    ports:
+      - "5433:5432" # 5432 do host costuma estar com o Postgres de dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d busstation"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      ConnectionStrings__DefaultConnection: "Host=db;Database=busstation;Username=postgres;Password=${POSTGRES_PASSWORD}"
+      JwtSettings__User__SecretKey: ${JWT_USER_SECRET_KEY:?defina JWT_USER_SECRET_KEY no .env}
+      JwtSettings__Admin__SecretKey: ${JWT_ADMIN_SECRET_KEY:?defina JWT_ADMIN_SECRET_KEY no .env}
+      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+
+volumes:
+  pgdata:
