@@ -34,6 +34,8 @@ builder.Services.AddSingleton<TokenService>();
 builder.Services.AddSingleton<ITokenService<User>, UserTokenService>();
 builder.Services.AddSingleton<ITokenService<Admin>, AdminTokenService>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
+builder.Services.AddSingleton<AdminBootstrapper>();
+builder.Services.AddHostedService<AdminBootstrapHostedService>();
 
 
 builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options => options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);

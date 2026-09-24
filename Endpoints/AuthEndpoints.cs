@@ -13,7 +13,8 @@ namespace BusStation_API.Endpoints
             app.MapPost("/register", Register);
             app.MapPost("/login", Login);
 
-            app.MapPost("/admin/create", AdminRegister);
+            // Só admin cria admin. O primeiro vem do seed (AdminBootstrapper, BOOTSTRAP_ADMIN_*).
+            app.MapPost("/admin/create", AdminRegister).RequireAuthorization("AdminPolicy");
             app.MapPost("/admin/login", AdminLogin);
 
 
@@ -81,7 +82,7 @@ namespace BusStation_API.Endpoints
         private static async Task<IResult> AdminLogin(AdminLoginRequest request, AppDbContext db, IAuthService service, ITokenService<Admin> tokenService)
         {
             var admin = await db.Admins.SingleOrDefaultAsync(a => a.Email == request.Email);
-            if(admin is null || service.PasswordVerify(request.Password, admin.Password))
+            if(admin is null || !service.PasswordVerify(request.Password, admin.Password))
                 return Results.Unauthorized();
 
             var token = tokenService.GenerateToken(admin);

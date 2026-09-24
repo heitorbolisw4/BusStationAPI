@@ -116,7 +116,7 @@ namespace BusStation_API.E2E
         [Fact]
         public async Task Admin_create_rejects_blank_fields_and_duplicate_email()
         {
-            var client = _api.Anonymous();
+            var client = await _api.NewAdmin();
             var email = $"{TestApi.Unique("admin")}@e2e.test";
 
             var blank = await client.PostAsJsonAsync("/admin/create", new { name = "", email, password = "admin123" });
