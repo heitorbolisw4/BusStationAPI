@@ -4,6 +4,7 @@
 
 ## 2026-09-24
 
+- **[DONE] Staging v1 fechado: DoD completo.** Fecha `FEAT-025` (front: cadastro/login com refresh, compra e "Minhas passagens") e `CHORE-021` (smoke via API e via UI no staging: busca → compra → minhas passagens, com vaga 40→37). O smoke de UI ainda não está versionado (`CHORE-033`).
 - **[DONE] BUG-030: fim do overbooking na compra.** A vaga passa a ser baixada por `UPDATE ... SET Seat = Seat - 1 WHERE Seat > 0` atômico, na mesma transação do ticket. Antes, 10 compras paralelas num embarque de 2 vagas passavam todas; o teste E2E novo garante exatamente 2.
 - **[DONE] FEAT-027: refresh token para clientes.** `/login` devolve `{ token, refreshToken, expiresIn }`; novos `POST /refresh` (rotação com detecção de reuso) e `POST /logout`. Access token passa a respeitar a config (padrão 15 min, antes fixo em 5). Refresh opaco de 7 dias, salvo só como hash. Migration `AddRefreshTokens` (aditiva).
 - **[DONE] CHORE-024: staging v1 no ar.** API no Railway (`busstationapi-production.up.railway.app`) + Neon (migrations via `efbundle`) + front no Vercel (`bus-station-tau.vercel.app`). Smoke via curl ok (health, register, login, search, tickets, 401/403 de admin). O fluxo de compra pela UI fica para o `FEAT-025`.

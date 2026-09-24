@@ -108,21 +108,6 @@
 
 ---
 
-### [FEAT-025] [front] Telas de cadastro/login, compra e "minhas passagens"
-**Prioridade:** Must | **Estimativa:** L
-**Origem:** fechamento do staging v1 (`../docs/deploy/escopo-deploy.md` §7): o DoD 2 não fecha porque o front só tem a busca
-**Contexto:** a API já suporta o fluxo inteiro (`/register`, `/login`, `/tickets/create`, `/tickets/list`) e foi validada no staging. Falta a UI. A API agora tem refresh token (`FEAT-027`, ver README "Autenticação de cliente"): a UI renova o access token via `POST /refresh` com single-flight, e só manda ao login quando o refresh falha.
-**Critério de aceite:**
-- [ ] Cadastro e login, com token guardado e enviado como `Bearer`
-- [ ] Botão de comprar numa saída da busca → `POST /tickets/create`, com feedback de sucesso e erro (sem vaga, não logado)
-- [ ] Tela "minhas passagens" (`GET /tickets/list`)
-- [ ] 401 em chamada autenticada → tenta `POST /refresh` uma vez (single-flight) e repete a request; se o refresh falhar → login com mensagem
-- [ ] Logout chama `POST /logout`
-- [ ] Testes Vitest cobrindo os fluxos felizes e o 401
-**Status:** To Do
-
----
-
 ### [FEAT-031] `TicketResponse` com cidade de origem e destino
 **Prioridade:** Could | **Estimativa:** XS
 **Origem:** revisão do contrato no FEAT-025 (agente do front)
@@ -169,17 +154,20 @@
 
 ---
 
-### [CHORE-021] Smoke test pós-deploy
-**Prioridade:** Must | **Estimativa:** S
-**Origem:** `../docs/deploy/escopo-deploy.md`, §4
-**Critério de aceite:** ver o escopo do deploy (script contra `BASE_URL` cobrindo `/health/ready` → compra → `/tickets/list`, com timeout de 90s na 1ª request por causa do cold start).
-**Status:** In Progress. Smoke via API ok em 2026-09-24 (busca → compra 201 → minhas passagens → vaga 40→39); falta o E2E de compra pela UI.
+### [CHORE-033] [front] Smoke de UI versionado (Playwright)
+**Prioridade:** Should | **Estimativa:** M
+**Origem:** fechamento do CHORE-021. O E2E de UI que validou o staging roda com scripts CDP fora do repo.
+**Critério de aceite:**
+- [ ] Playwright no repo do front, com o fluxo buscar → comprar (deslogado → cadastro → volta) → minhas passagens
+- [ ] Roda contra uma `BASE_URL` (staging) e sobe o próprio browser (sem porta de depuração fixa)
+- [ ] Documentado no README do front
+**Status:** To Do
 
 ---
 
 ### [CHORE-020] CD automático para staging
 **Prioridade:** Could | **Estimativa:** S
 **Origem:** `../docs/deploy/escopo-deploy.md`, §4 (fase 2)
-**Critério de aceite:** merge em `main` → migrations (CHORE-026) → deploy → smoke test (CHORE-021) automático; smoke vermelho deixa o pipeline vermelho.
-**Status:** Blocked (depende de CHORE-021)
+**Critério de aceite:** merge em `main` → migrations (CHORE-026) → deploy → smoke de API e de UI (CHORE-033) automáticos; smoke vermelho deixa o pipeline vermelho.
+**Status:** Blocked (depende de CHORE-026 e CHORE-033)
 
