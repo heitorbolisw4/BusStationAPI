@@ -9,7 +9,7 @@ namespace BusStation_API.Endpoints
     {
         public static IEndpointRouteBuilder MapDistanceEndpoints(this IEndpointRouteBuilder app)
         {
-            var group = app.MapGroup("/distances");
+            var group = app.MapGroup("/");
             group.MapPut("/create", CreateDistance);
             group.MapGet("/list", ListDistances);
             return app;

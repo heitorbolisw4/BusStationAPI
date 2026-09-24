@@ -13,6 +13,7 @@ namespace BusStation_API.Endpoints
             app.MapPost("/register", Register);
             app.MapPost("/login", Login);
 
+            app.MapPost("/admin/create", AdminRegister);
             app.MapPost("/admin/login", AdminLogin);
 
 
@@ -54,6 +55,29 @@ namespace BusStation_API.Endpoints
 
 
         // admin Endpoints
+        private static async Task<IResult> AdminRegister(AdminRegisterRequest request, AppDbContext db, IAuthService service)
+        {
+            if(string.IsNullOrWhiteSpace(request.Name) ||
+                string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Password) )
+                return Results.BadRequest();
+
+            if(await db.Admins.AnyAsync(a => a.Email == request.Email))
+                return Results.Conflict();
+
+            string doHashPassw = service.GenerateHash(request.Password);
+            Admin admin = new()
+            {
+                Name = request.Name,
+                Email = request.Email,
+                Password = doHashPassw
+            };
+
+            db.Admins.Add(admin);
+            await db.SaveChangesAsync();
+            return Results.Created();
+        }
+
         private static async Task<IResult> AdminLogin(AdminLoginRequest request, AppDbContext db, IAuthService service, ITokenService<Admin> tokenService)
         {
             var admin = await db.Admins.SingleOrDefaultAsync(a => a.Email == request.Email);

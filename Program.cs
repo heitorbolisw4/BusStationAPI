@@ -3,11 +3,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BusStation_API.Data;
-using BusStation_API.DTO.Admin;
-using BusStation_API.DTO.Boarding;
-using BusStation_API.DTO.Destination;
-using BusStation_API.DTO.Distance;
-using BusStation_API.DTO.Origin;
 using BusStation_API.Endpoints;
 using BusStation_API.Entities;
 using BusStation_API.Interface;
@@ -149,106 +144,15 @@ if (app.Environment.IsDevelopment())
 
 #region Groups
 var user = app.MapGroup("/user").RequireAuthorization("UserPolicy").WithTags("Users");
-var admin = app.MapGroup("/admin").WithTags("Admins");
 var cities =  app.MapGroup("/cities");//RequireAuthorization("AdminPolicy").WithTags("Cities");
 var routes = app.MapGroup("/routes");//.RequireAuthorization("AdminPolicy").WithTags("Routes");
 var prices = app.MapGroup("/prices").RequireAuthorization("AdminPolicy").WithTags("Prices");
-var origins = app.MapGroup("/origins").RequireAuthorization("AdminPolicy").WithTags("Origins");
 var tickets = app.MapGroup("/tickets").RequireAuthorization().WithTags("Tickets");
-var distance = app.MapGroup("/distance").RequireAuthorization("AdminPolicy").WithTags("Distances");
 var distances =  app.MapGroup("/distances").RequireAuthorization("AdminPolicy").WithTags("Distances");
 var boardings = app.MapGroup("/boardings").WithTags("Boardings");
-var destination = app.MapGroup("/destination").RequireAuthorization("AdminPolicy").WithTags("Destinations");
 #endregion
 
 
-
-#region Admins
-
-admin.MapPost("/create", async (AppDbContext db, AdminRequestDto request, IAuthService service) =>
-{
-    if(string.IsNullOrWhiteSpace(request.Name) ||
-        string.IsNullOrWhiteSpace(request.Email) ||
-        string.IsNullOrWhiteSpace(request.Password) )
-        return Results.BadRequest();
-
-    //valido se email existe
-    var exists = await db.Admins.AnyAsync(x => x.Email ==  request.Email);
-    if(exists)
-        return Results.Conflict();
-
-    // faz o hash da senha
-    string doHashPassw = service.GenerateHash(request.Password);
-
-    Admin adm = new()
-    {
-        Name = request.Name,
-        Email = request.Email,
-        Password = doHashPassw
-    };
-    db.Add(adm);
-    await db.SaveChangesAsync();
-    return Results.Created();
-});
-
-#endregion
-
-
-#region Boardings
-
-
-// boardings.MapGet("/search", async (AppDbContext db, int originCityId, int destinationCityId, DateOnly date) =>
-// {
-//     // valido request -> return 400
-//     if(originCityId <= 0 || destinationCityId <= 0 || originCityId == destinationCityId)
-//         return Results.BadRequest();
-
-//     var now = DateTime.Now;
-//     var today = DateOnly.FromDateTime(now);
-
-//     // valido data -> return 400
-//     if(date < today)
-//         return Results.BadRequest();
-
-//     // se a busca é para hoje, saída que já partiu não interessa ao cliente
-//     var minTime = date == today ? TimeOnly.FromDateTime(now) : TimeOnly.MinValue;
-
-//     var departures = await db.Boardings
-//         .Where(b => b.BoardingDate == date
-//                  && b.BoardingTime >= minTime
-//                  && b.Seat > 0
-//                  && b.Routes!.Distance!.Origin!.CityId == originCityId
-//                  && b.Routes.Distance.Destination!.CityId == destinationCityId)
-//         .OrderBy(b => b.BoardingTime)
-//         .Select(b => new SearchBoardingResponseDto
-//         {
-//             BoardingId = b.Id,
-//             RouteId = b.RouteId,
-//             RouteName = b.Routes!.RouteName,
-
-//             OriginCity = b.Routes.Distance!.Origin!.City!.CityName,
-//             OriginAcronym = b.Routes.Distance.Origin.City.Acronym,
-//             DestinationCity = b.Routes.Distance.Destination!.City!.CityName,
-//             DestinationAcronym = b.Routes.Distance.Destination.City.Acronym,
-
-//             Kilometers = b.Routes.Distance.Kilometers,
-//             BoardingDate = b.BoardingDate,
-//             BoardingTime = b.BoardingTime,
-//             Seats = b.Seat,
-//             Price = b.Routes.Price
-//         })
-//         .ToListAsync();
-
-//     // Faltando de propósito: `&& b.Routes!.IsActive`. POST /routes/create nunca
-//     // seta IsActive, então toda rota no banco está com false — o filtro
-//     // devolveria lista vazia sempre. Acrescente aqui quando o create setar true.
-
-//     // Lista vazia é busca bem-sucedida com zero resultados, não erro:
-//     // 200 com [] deixa o front escrever "nenhuma saída nesse dia".
-//     return Results.Ok(departures);
-// });
-
-#endregion
 
 app.MapSwagger();
 
@@ -258,7 +162,7 @@ user.MapUserEndpoints();
 boardings.MapBoardingsEndpoints();
 routes.MapRouteEndpoints();
 cities.MapCitiesEnpoints();
-app.MapDistanceEndpoints();
+distances.MapDistanceEndpoints();
 prices.MapPriceEndpoints();
 tickets.MapTicketEndpoints();
 

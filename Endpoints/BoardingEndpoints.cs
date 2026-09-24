@@ -12,9 +12,52 @@ namespace BusStation_API.Endpoints
         {
             var group = app.MapGroup("/");
             group.MapPost("/create", CreateBoarding);
+            group.MapGet("/search", SearchBoardings);
             return app;
         }
 
+        private static async Task<IResult> SearchBoardings(int originCityId, int destinationCityId, DateOnly date, AppDbContext db)
+        {
+            if(originCityId <= 0 || destinationCityId <= 0 || originCityId == destinationCityId)
+                return Results.BadRequest( new { message = "You must provide two different valid cities" } );
+
+            var now = DateTime.Now;
+            var today = DateOnly.FromDateTime(now);
+            if(date < today)
+                return Results.BadRequest( new { message = "You must provide a valid date" } );
+
+            // se a busca é para hoje, saída que já partiu não interessa ao cliente
+            var minTime = date == today ? TimeOnly.FromDateTime(now) : TimeOnly.MinValue;
+
+            // Faltando de propósito: `&& b.Routes!.IsActive`. POST /routes/create nunca
+            // seta IsActive, então toda rota no banco está com false — o filtro
+            // devolveria lista vazia sempre. Acrescente aqui quando o create setar true.
+            var departures = await db.Boardings
+                .Where(b => b.BoardingDate == date
+                         && b.BoardingTime >= minTime
+                         && b.Seat > 0
+                         && b.Routes!.Distance!.OriginCityId == originCityId
+                         && b.Routes.Distance.DestinationCityId == destinationCityId)
+                .OrderBy(b => b.BoardingTime)
+                .Select(b => new SearchBoardingResponse(
+                    b.Id,
+                    b.RouteId,
+                    b.Routes!.RouteName,
+                    b.Routes.Distance!.OriginCity!.CityName,
+                    b.Routes.Distance.OriginCity.Acronym,
+                    b.Routes.Distance.DestinationCity!.CityName,
+                    b.Routes.Distance.DestinationCity.Acronym,
+                    b.Routes.Distance.Kilometers,
+                    b.BoardingDate,
+                    b.BoardingTime,
+                    b.Seat,
+                    b.Routes.Price))
+                .ToListAsync();
+
+            // Lista vazia é busca bem-sucedida com zero resultados, não erro:
+            // 200 com [] deixa o front escrever "nenhuma saída nesse dia".
+            return Results.Ok(departures);
+        }
 
 
         private static async Task<IResult> CreateBoarding(CreateBoardingRequest request, AppDbContext db)
