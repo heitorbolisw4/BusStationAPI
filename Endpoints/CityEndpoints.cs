@@ -24,7 +24,7 @@ namespace BusStation_API.Endpoints
             if(error is not null)
                 return Results.BadRequest(new { message = error});
 
-            var exists = await db.City.AnyAsync(c => c.CityName == request.CityName);
+            var exists = await db.City.AnyAsync(c => c.CityName == request.CityName || c.Acronym == request.Acronym);
             if(exists)
                 return Results.Conflict();
 

@@ -8,13 +8,14 @@
 
 ---
 
-### [BUG-001] Checagem de cidade duplicada não valida `Acronym`
+### [BUG-034] Checagem de duplicidade no `PUT /cities/update/{id}` não olha `Acronym` nem ignora a própria cidade
 **Prioridade:** Must | **Estimativa:** XS
-**Origem:** `docs/ARCHITECTURE.md` §4.1
-**Contexto:** `CityEndpoints.Create` só compara `CityName`. `Acronym` tem índice único no banco — duas cidades com `Acronym` repetido não caem no `Results.Conflict()` esperado, estouram `DbUpdateException` não tratada (500 cru pro cliente).
+**Origem:** correção do `BUG-001` (mesmo furo, no `Update`)
+**Contexto:** `CityEndpoints.Update` só compara `CityName` + `State`, e sem excluir a cidade que está sendo editada. Trocar o `Acronym` para um já usado por outra cidade estoura o índice único (500 cru). E editar só o `Acronym`, mantendo nome e estado, bate na própria linha e devolve 409 indevido.
 **Critério de aceite:**
-- [ ] `POST /cities/create` retorna `409 Conflict` quando `Acronym` já existe (mesmo com `CityName` diferente)
-- [ ] Remover o `Skip` de `CityTests.Create_with_an_acronym_already_in_use_returns_409` e ele passar; `Create_rejects_blank_fields_and_duplicate_name` continua verde
+- [ ] `PUT /cities/update/{id}` retorna `409 Conflict` quando o `Acronym` já pertence a outra cidade
+- [ ] Editar só o `Acronym` de uma cidade (nome e estado iguais) retorna `204`
+- [ ] Um teste E2E para cada caso; `City_lifecycle_create_update_delete` continua verde
 **Status:** To Do
 
 ---

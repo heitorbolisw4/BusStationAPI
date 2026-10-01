@@ -42,7 +42,7 @@ User ──< Ticket
 
 Itens abaixo têm ticket correspondente em `BACKLOG.md` — este documento explica o *porquê*, o backlog controla o *quando*.
 
-1. **Checagem de cidade duplicada não cobre `Acronym`** (`CityEndpoints.Create`) — só compara `CityName`. `Acronym` tem índice único no banco (`AppDbContext`), então duas cidades com o mesmo `Acronym` não caem no `Results.Conflict()` esperado: estouram `DbUpdateException` não tratada (500 cru). → `BUG-001`
+1. ~~**Checagem de cidade duplicada não cobre `Acronym`** (`CityEndpoints.Create`)~~ Resolvido no `Create` (`BUG-001`): compara `CityName` ou `Acronym`. O `Update` ainda só compara `CityName` + `State`, sem excluir a própria cidade: sigla repetida estoura o índice único (500 cru) e editar só a sigla devolve 409 indevido. → `BUG-034`
 2. ~~**RNF-01:** `/cities`, `/routes` e `/boardings` sem autenticação.~~ Resolvido (`FEAT-003`): os três grupos exigem `AdminPolicy`, com `AllowAnonymous()` só em `GET /cities/list` e `GET /boardings/search`, que o front chama sem login. Os GETs de `/routes` ficaram protegidos, porque o front não os usa e o `/boardings/search` já traz nome, km e preço da rota.
 3. **Valores monetários em `float`** (`Price.PricePerKm`, `Route.Price`, `Ticket.FarePaid`) — RNF-03. `decimal` é o tipo correto para dinheiro (evita erro de arredondamento binário). → `DEBT-002`
 4. ~~**Login de admin com verificação de senha invertida + `POST /admin/create` anônimo**~~ Resolvido (`BUG-013`). `/admin/create` exige `AdminPolicy`, e o primeiro admin vem do seed de bootstrap (§6).

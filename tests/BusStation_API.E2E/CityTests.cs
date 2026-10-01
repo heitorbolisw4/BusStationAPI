@@ -65,7 +65,7 @@ namespace BusStation_API.E2E
             await Expect.Status(response, HttpStatusCode.Conflict);
         }
 
-        [Fact(Skip = "BUG-001: checagem de duplicidade não olha Acronym — índice único estoura 500")]
+        [Fact]
         public async Task Create_with_an_acronym_already_in_use_returns_409()
         {
             var city = await _api.CreateCity();

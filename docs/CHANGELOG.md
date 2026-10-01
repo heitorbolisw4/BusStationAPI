@@ -2,6 +2,10 @@
 
 > Uma linha por entrega, com hash do commit. Histórico completo e detalhado fica no `git log` — aqui é só o "o que foi entregue", não o "como".
 
+## 2026-10-01
+
+- **[DONE] BUG-001: sigla de cidade repetida devolve 409.** `POST /cities/create` passa a checar também o `Acronym`; antes, a duplicata estourava o índice único e virava 500. Teste E2E reativado. O mesmo furo no `Update` fica no `BUG-034`.
+
 ## 2026-09-24
 
 - **[DONE] FEAT-031: passagem traz cidade de origem e destino.** `TicketResponse` ganha `originCity` e `destinationCity` (campos novos no fim, sem quebrar os atuais) em `POST /tickets/create`, `GET /tickets/list` e `GET /tickets/list/{id}`. "Minhas passagens" deixa de depender do nome que o admin dá à rota.
